@@ -1,0 +1,2350 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="NEURO//CORE — симулятор нейрона на модели Ходжкина–Хаксли: клиника, головоломки, конструктор нейросети. Автор arsenomen.">
+<meta name="author" content="arsenomen">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html,body{margin:0}img{max-width:100%}</style>
+<title>NEURO//CORE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Onest:wght@400;500;600&family=Unbounded:wght@500;700;800&display=swap">
+<style>
+/* Layout: HUD-лаборатория в глубоководной биолюминесценции — пульт стимулятора слева, живая клетка и осциллограф в центре, фармакология и миссии справа */
+:root{
+  color-scheme: dark;
+  --abyss:#03080f; --deep:#071422; --panel:#0a1b2b; --panel-2:#0f2639;
+  --line:#163650; --line-2:#21506f;
+  --ink:#dff6ff; --dim:#80a5ba; --faint:#6b8ca2;
+  --na:#3fe0ff; --k:#ffb547; --spike:#ff5ad1; --violet:#a58bff; --ok:#6dffb4; --bad:#ff6b7a;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"Onest","Segoe UI",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --r:6px;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{
+  background:
+    radial-gradient(1100px 650px at 72% -12%, #0c2a44 0%, transparent 62%),
+    radial-gradient(900px 600px at -10% 110%, #170e30 0%, transparent 60%),
+    var(--abyss);
+  color:var(--ink); font-family:var(--f-body); font-size:14px; line-height:1.45;
+  -webkit-font-smoothing:antialiased; min-height:100%;
+}
+body.locked{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--na);outline-offset:2px}
+h1,h2,p{margin:0}
+
+/* ---------- INTRO ---------- */
+.intro{position:fixed;inset:0;z-index:50;background:var(--abyss);overflow:hidden}
+.intro canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+.intro::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px)}
+.intro-ui{position:absolute;inset:0;display:flex;flex-direction:column;
+  padding-top:calc(env(safe-area-inset-top,0px) + 18px);
+  padding-bottom:calc(env(safe-area-inset-bottom,0px) + 26px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+.intro-top{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.intro-center{margin-top:auto;width:min(720px,100%);align-self:center;position:relative}
+.intro-title{font-family:var(--f-display);font-weight:800;font-size:clamp(32px,9vw,112px);
+  line-height:.95;letter-spacing:-.03em;white-space:nowrap}
+.intro-title span{display:inline-block;min-width:.3em}
+.author{display:inline-flex;align-items:center;gap:8px;margin-bottom:14px;padding:5px 12px;border:1px solid var(--line-2);
+  border-radius:999px;font-family:var(--f-mono);font-size:12px;color:var(--dim);letter-spacing:.04em;animation:bootIn .6s .9s ease-out both}
+.author::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--spike);box-shadow:0 0 8px var(--spike)}
+.author b{color:var(--ink);font-weight:600}
+.intro-title .sl{color:var(--spike);text-shadow:0 0 26px rgba(255,90,209,.65)}
+.intro-sub{margin:.7em 0 1.3em;color:var(--dim);font-size:clamp(14px,1.6vw,17px);max-width:52ch}
+.boot{list-style:none;margin:0;padding:0;font-family:var(--f-mono);font-size:12px;color:var(--dim);
+  display:grid;gap:4px;min-height:9.6em}
+.boot li{display:flex;gap:10px;justify-content:space-between;animation:bootIn .35s ease-out both}
+.boot li span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.boot li b{color:var(--ok);font-weight:600}
+@keyframes bootIn{from{opacity:0;transform:translateX(-8px);clip-path:inset(0 100% 0 0)}to{opacity:1;transform:none;clip-path:inset(0 0 0 0)}}
+.progress{height:2px;background:var(--line);margin:16px 0 22px;overflow:hidden;border-radius:2px}
+.progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--na),var(--spike));
+  box-shadow:0 0 12px var(--na);transition:width .3s ease}
+.enter-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px 20px;min-height:56px}
+.enter{display:inline-flex;align-items:center;gap:14px;padding:16px 26px;border-radius:999px;
+  border:1px solid var(--na);background:rgba(63,224,255,.08);font-family:var(--f-display);font-weight:600;
+  font-size:15px;letter-spacing:.03em;color:var(--ink);
+  box-shadow:0 0 0 0 rgba(63,224,255,.5),inset 0 0 20px rgba(63,224,255,.15);
+  animation:breathe 2.4s ease-in-out infinite, popIn .5s cubic-bezier(.2,.9,.3,1.3) both}
+.enter::after{content:"→";transition:transform .2s}
+.enter:hover{background:rgba(63,224,255,.16)}
+.enter:hover::after{transform:translateX(4px)}
+@keyframes breathe{50%{box-shadow:0 0 0 10px rgba(63,224,255,0),0 0 42px rgba(63,224,255,.35),inset 0 0 26px rgba(63,224,255,.25)}}
+@keyframes popIn{from{opacity:0;transform:scale(.85)}}
+.hint{font-family:var(--f-mono);font-size:11px;color:var(--faint);letter-spacing:.02em}
+.ghost{background:none;border:1px solid var(--line-2);border-radius:999px;padding:7px 13px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.ghost:hover{color:var(--ink);border-color:var(--na)}
+.intro .flash{position:absolute;left:0;right:0;top:50%;height:2px;background:var(--na);
+  box-shadow:0 0 30px 6px var(--na);opacity:0;transform:scaleX(0);pointer-events:none}
+.intro.leaving{animation:introOut .95s cubic-bezier(.6,0,.2,1) forwards;pointer-events:none}
+.intro.leaving .flash{animation:flash .75s ease-out forwards}
+@keyframes introOut{0%{opacity:1}35%{opacity:1;filter:brightness(1.7)}100%{opacity:0;transform:scale(1.12);filter:blur(10px) brightness(2)}}
+@keyframes flash{0%{opacity:0;transform:scaleX(0)}30%{opacity:1;transform:scaleX(1)}100%{opacity:0;transform:scaleX(1) scaleY(80)}}
+
+/* ---------- APP ---------- */
+.app{max-width:1640px;margin:0 auto;display:flex;flex-direction:column;gap:14px;
+  padding-block:16px 32px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px}
+.brand{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-right:auto;min-width:0}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:20px;letter-spacing:-.02em}
+.brand b i{font-style:normal;color:var(--spike)}
+.brand small{font-family:var(--f-mono);font-size:11px;color:var(--faint);letter-spacing:.02em}
+.seg{display:inline-flex;padding:3px;border:1px solid var(--line);border-radius:999px;background:var(--deep);gap:2px}
+.seg button{border:0;background:none;padding:7px 14px;border-radius:999px;font-size:13px;color:var(--dim);white-space:nowrap}
+.seg button:hover{color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--panel-2);color:var(--ink);
+  box-shadow:inset 0 0 0 1px var(--line-2),0 0 16px rgba(63,224,255,.16)}
+.seg.full{display:flex}
+.seg.full button{flex:1;padding-inline:6px}
+.seg.sm button{padding:5px 10px;font-size:12px}
+.chip{font-family:var(--f-mono);font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;
+  padding:7px 12px;background:var(--deep);font-variant-numeric:tabular-nums;white-space:nowrap}
+button.chip:hover{color:var(--ink);border-color:var(--line-2)}
+.chip[aria-pressed="false"]{color:var(--faint)}
+.chip.rank{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 35%,var(--line))}
+
+.grid{display:grid;gap:14px;grid-template-columns:282px minmax(0,1fr) 316px;
+  grid-template-areas:"ctrl stage lab" "ctrl scope lab";align-items:start}
+.p-ctrl{grid-area:ctrl}.p-stage{grid-area:stage}.p-scope{grid-area:scope}.p-lab{grid-area:lab}
+@media (max-width:1180px){.grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"stage stage" "scope scope" "ctrl lab"}}
+@media (max-width:720px){.grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"stage" "scope" "ctrl" "lab"}}
+
+.panel{position:relative;background:linear-gradient(180deg,rgba(13,34,54,.82),rgba(7,20,34,.9));
+  border:1px solid var(--line);border-radius:var(--r);padding:14px;min-width:0}
+.panel::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;opacity:.6;
+  background:
+    linear-gradient(var(--na),var(--na)) top left/16px 1px no-repeat,
+    linear-gradient(var(--na),var(--na)) top left/1px 16px no-repeat,
+    linear-gradient(var(--na),var(--na)) bottom right/16px 1px no-repeat,
+    linear-gradient(var(--na),var(--na)) bottom right/1px 16px no-repeat}
+.ph{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-family:var(--f-mono);font-weight:600;
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:12px}
+.ph span{color:var(--faint);letter-spacing:.08em}
+.sep{height:1px;background:var(--line);margin:18px 0 16px}
+.note{font-size:12px;color:var(--dim);line-height:1.4}
+
+/* stage */
+.stage-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px 18px;margin-bottom:12px}
+.stage-head > div:first-child{min-width:0;flex:1 1 260px}
+.stage-head .ph{margin-bottom:6px}
+.desc{font-size:13px;color:var(--dim);max-width:62ch}
+.vread{display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums}
+.vread .vl{font-family:var(--f-mono);font-size:12px;color:var(--dim)}
+.vread b{font-family:var(--f-display);font-weight:700;font-size:34px;letter-spacing:-.02em;min-width:4.4ch;text-align:right;
+  text-shadow:0 0 18px rgba(63,224,255,.35);transition:color .1s}
+.vread b.hot{color:var(--spike);text-shadow:0 0 22px rgba(255,90,209,.7)}
+.vread .u{font-family:var(--f-mono);font-size:12px;color:var(--dim)}
+.cellwrap{position:relative;height:clamp(290px,47vh,540px);border-radius:4px;overflow:hidden;border:1px solid var(--line)}
+@media (max-width:720px){.cellwrap{height:min(560px,72vh)}}
+.cellwrap canvas,.scopewrap canvas{width:100%;height:100%;display:block}
+.cellwrap canvas{touch-action:manipulation}
+.cellwrap.net canvas{touch-action:none}
+.legend{position:absolute;left:10px;bottom:10px;right:10px;display:flex;flex-wrap:wrap;gap:6px 14px;
+  font-family:var(--f-mono);font-size:11px;color:var(--dim);pointer-events:none}
+.legend span{display:inline-flex;align-items:center;gap:6px;background:rgba(3,8,15,.6);padding:3px 8px;border-radius:999px}
+.legend i{width:7px;height:7px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.card{position:absolute;z-index:3;width:min(272px,calc(100% - 16px));background:rgba(8,22,36,.93);
+  border:1px solid var(--na);border-radius:var(--r);padding:12px 14px;display:grid;gap:4px;
+  box-shadow:0 0 26px rgba(63,224,255,.25),inset 0 0 30px rgba(63,224,255,.06);
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:cardIn .25s cubic-bezier(.2,.9,.3,1.2)}
+.card small{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--na);padding-right:24px}
+.card b{font-family:var(--f-display);font-weight:600;font-size:14px}
+.card p{font-size:12.5px;color:var(--dim);line-height:1.42}
+.card-live{font-family:var(--f-mono);font-size:11.5px;color:var(--ink);border-top:1px solid var(--line);
+  padding-top:7px;margin-top:4px;font-variant-numeric:tabular-nums;white-space:pre-line}
+.card-x{position:absolute;top:5px;right:5px;width:28px;height:28px;border:0;background:none;color:var(--dim);font-size:18px;line-height:1;border-radius:4px}
+.card-x:hover{color:var(--ink)}
+@keyframes cardIn{from{opacity:0;transform:translateY(6px) scale(.97)}}
+.stats{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;margin-top:12px}
+.gates{display:flex;gap:12px;margin-right:auto}
+.gate{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;color:var(--dim)}
+.gate i{display:block;width:58px;height:4px;background:var(--line);border-radius:2px;overflow:hidden}
+.gate b{display:block;height:100%;width:0;background:var(--c);box-shadow:0 0 6px var(--c)}
+.stat{font-family:var(--f-mono);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.stat b{color:var(--ink);font-weight:600}
+
+/* scope */
+.scope-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.scope-head .ph{margin:0}
+.scope-head + .scopewrap{margin-bottom:14px}
+.scopewrap{position:relative;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.scopewrap.v{height:220px}.scopewrap.i{height:160px;margin-bottom:0}
+.eq{margin-top:12px;font-family:var(--f-mono);font-size:11.5px;color:var(--faint);overflow-x:auto;white-space:nowrap;padding-bottom:2px}
+.eq b{color:var(--dim);font-weight:400}
+
+/* controls */
+.fire{width:100%;margin:12px 0 18px;padding:16px 12px;border-radius:var(--r);border:1px solid var(--spike);
+  background:radial-gradient(120% 140% at 50% 120%,rgba(255,90,209,.28),rgba(255,90,209,.04) 60%),var(--deep);
+  font-family:var(--f-display);font-weight:700;font-size:15px;letter-spacing:.06em;text-transform:uppercase;
+  box-shadow:0 0 22px rgba(255,90,209,.22),inset 0 0 22px rgba(255,90,209,.12);
+  display:flex;flex-direction:column;align-items:center;gap:4px;position:relative;overflow:hidden;transition:transform .08s}
+.fire small{font-family:var(--f-mono);font-weight:400;font-size:11px;letter-spacing:.04em;color:var(--dim)}
+.fire:active{transform:scale(.985)}
+.fire.hit::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 50%,rgba(255,180,240,.55),transparent 70%);animation:hit .45s ease-out forwards}
+@keyframes hit{from{opacity:1;transform:scale(.4)}to{opacity:0;transform:scale(1.6)}}
+.fire.armed{border-color:var(--na);background:radial-gradient(120% 140% at 50% 120%,rgba(63,224,255,.25),rgba(63,224,255,.03) 60%),var(--deep);
+  box-shadow:0 0 22px rgba(63,224,255,.2),inset 0 0 22px rgba(63,224,255,.1)}
+.field{display:grid;gap:4px;margin-bottom:12px}
+.field label{display:flex;justify-content:space-between;gap:8px;font-size:13px;color:var(--dim)}
+.field output{font-family:var(--f-mono);font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:0;--p:50%}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:linear-gradient(90deg,var(--na) var(--p),var(--line-2) var(--p))}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-6px;transform:rotate(45deg);
+  background:var(--abyss);border:2px solid var(--na);box-shadow:0 0 10px var(--na)}
+input[type=range]::-moz-range-track{height:2px;background:var(--line-2)}
+input[type=range]::-moz-range-progress{height:2px;background:var(--na)}
+input[type=range]::-moz-range-thumb{width:11px;height:11px;border-radius:0;transform:rotate(45deg);background:var(--abyss);border:2px solid var(--na)}
+.row{display:flex;gap:8px}
+.btn{flex:1;padding:9px 10px;border-radius:var(--r);border:1px solid var(--line-2);background:var(--deep);font-size:13px;color:var(--dim)}
+.btn:hover{color:var(--ink);border-color:var(--na)}
+.btn[aria-pressed="true"]{color:var(--ink);border-color:var(--na);box-shadow:inset 0 0 14px rgba(63,224,255,.18)}
+.btn.primary{border-color:var(--na);color:var(--ink);background:rgba(63,224,255,.1)}
+.synrow{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px;font-family:var(--f-mono);font-size:12px;color:var(--dim)}
+.synrow .seg button[data-t="exc"][aria-pressed="true"]{color:var(--ok)}
+.synrow .seg button[data-t="inh"][aria-pressed="true"]{color:var(--bad)}
+.tools{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.tools .btn{padding:8px 4px;font-size:12px}
+.presets{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 14px}
+.presets .btn{flex:0 0 auto;padding:6px 10px;font-size:12px}
+#toolHint{margin-bottom:12px;min-height:3.4em}
+.caselist{display:grid;gap:6px}
+.case-item{display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;width:100%;padding:9px 10px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--deep);font-size:13px}
+.case-item:hover{border-color:var(--na)}
+.case-item span{font-family:var(--f-mono);font-size:11px;color:var(--faint);white-space:nowrap}
+.case-item.done span{color:var(--ok)}
+.case{display:grid;gap:8px;padding:12px;border:1px solid var(--na);border-radius:var(--r);background:var(--deep);
+  box-shadow:inset 0 0 22px rgba(63,224,255,.08)}
+.case small{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--na)}
+.case b{font-family:var(--f-display);font-weight:600;font-size:14px}
+.case p{font-size:12.5px;line-height:1.42}
+.opts{display:grid;gap:6px}
+.opts .btn,.case .row .btn{text-align:left;padding:8px 10px;font-size:12.5px}
+.case .row{flex-wrap:wrap}
+.case .row .btn{flex:1 1 auto;text-align:center}
+.fb{font-size:12.5px;padding:8px 10px;border-radius:var(--r);border:1px solid color-mix(in srgb,var(--c,var(--na)) 45%,transparent);
+  background:color-mix(in srgb,var(--c,var(--na)) 10%,transparent)}
+.truth{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-family:var(--f-mono);font-size:11.5px}
+.truth:empty{display:none}
+.truth li{display:flex;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:4px;background:var(--panel);color:var(--dim)}
+.truth li.ok{color:var(--ok)}.truth li.bad{color:var(--bad)}
+
+/* lab */
+.carts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cart{text-align:left;border:1px solid var(--line);background:var(--deep);border-radius:var(--r);padding:10px 10px 11px;
+  display:grid;gap:3px;position:relative;align-content:start;transition:border-color .2s,box-shadow .2s}
+.cart:hover{border-color:var(--line-2)}
+.cart .code{font-family:var(--f-mono);font-weight:600;font-size:15px;color:var(--c)}
+.cart .nm{font-size:12.5px;font-weight:500}
+.cart .ds{font-size:11.5px;color:var(--dim);line-height:1.35}
+.cart[aria-pressed="true"]{border-color:var(--c);box-shadow:inset 0 0 22px color-mix(in srgb,var(--c) 22%,transparent),0 0 14px color-mix(in srgb,var(--c) 25%,transparent)}
+.cart[aria-pressed="true"]::after{content:"введён";position:absolute;top:10px;right:9px;font-family:var(--f-mono);font-size:11px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--c)}
+.missions{list-style:none;margin:0;padding:0;display:grid;gap:7px}
+.missions li{display:grid;grid-template-columns:14px minmax(0,1fr);gap:10px;padding:9px 10px;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--deep);transition:border-color .3s}
+.missions .dot{width:10px;height:10px;margin-top:4px;border:1.5px solid var(--faint);transform:rotate(45deg)}
+.missions .t{font-weight:600;font-size:13px}
+.missions .h{font-size:12px;color:var(--dim);line-height:1.38;margin-top:2px}
+.missions li.done{border-color:color-mix(in srgb,var(--ok) 40%,var(--line))}
+.missions li.done .dot{background:var(--ok);border-color:var(--ok);box-shadow:0 0 10px var(--ok)}
+.missions li.done .t::after{content:" · выполнено";color:var(--ok);font-weight:400;font-size:12px}
+.missions li.lvl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;background:none;border:0;padding:10px 2px 0;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--na)}
+.missions li.lvl:first-child{padding-top:0}
+.missions li.lvl span{color:var(--faint);letter-spacing:.06em}
+.missions li.lvl.locked{color:var(--faint)}
+.missions li.locked:not(.lvl){opacity:.45}
+.missions li.locked .dot{border-style:dashed}
+.log{list-style:none;margin:0;padding:0;font-family:var(--f-mono);font-size:11.5px;max-height:190px;overflow:auto;display:grid;gap:3px;align-content:start}
+.log li{display:grid;grid-template-columns:88px minmax(0,1fr);gap:8px;color:var(--dim)}
+.log time{color:var(--faint);font-variant-numeric:tabular-nums}
+.log li.spike span{color:var(--spike)}.log li.drug span{color:var(--k)}.log li.ok span{color:var(--ok)}.log li.sys span{color:var(--na)}
+
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 20px);z-index:48;
+  transform:translate(-50%,160%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);
+  background:var(--panel-2);border:1px solid var(--ok);border-radius:var(--r);padding:12px 18px;
+  box-shadow:0 0 30px rgba(109,255,180,.25);display:grid;gap:2px;max-width:calc(100vw - 32px)}
+.toast small{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ok)}
+.toast b{font-family:var(--f-display);font-weight:600;font-size:15px}
+.toast.show{transform:translate(-50%,0)}
+
+/* tour */
+.tour{position:fixed;inset:0;z-index:46;pointer-events:none}
+.tour-spot{position:fixed;border-radius:8px;pointer-events:none;
+  box-shadow:0 0 0 9999px rgba(2,6,12,.72),0 0 0 2px var(--na),0 0 34px rgba(63,224,255,.55);
+  transition:left .35s cubic-bezier(.2,.8,.2,1),top .35s cubic-bezier(.2,.8,.2,1),width .35s cubic-bezier(.2,.8,.2,1),height .35s cubic-bezier(.2,.8,.2,1)}
+.tour-card{position:fixed;pointer-events:auto;width:min(340px,calc(100vw - 32px));background:var(--panel-2);
+  border:1px solid var(--na);border-radius:var(--r);padding:14px 16px;display:grid;gap:6px;
+  box-shadow:0 0 30px rgba(63,224,255,.3);transition:left .35s cubic-bezier(.2,.8,.2,1),top .35s cubic-bezier(.2,.8,.2,1)}
+.tour-card small{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--na)}
+.tour-card b{font-family:var(--f-display);font-weight:600;font-size:16px}
+.tour-card p{font-size:13px;color:var(--dim)}
+.tour-btns{display:flex;gap:8px;margin-top:6px}
+.tour-btns .btn{padding:8px 6px}
+
+.app.live .bar,.app.live .panel{animation:rise .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0) * 90ms + 250ms)}
+@keyframes rise{from{opacity:0;transform:translateY(22px) scale(.985);filter:blur(4px)}}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+
+</head>
+<body>
+<div class="intro" id="intro">
+  <canvas id="introCanvas" aria-hidden="true"></canvas>
+  <div class="flash"></div>
+  <div class="intro-ui">
+    <div class="intro-top">
+      <span>Лаборатория возбудимых мембран</span>
+      <button class="ghost" id="skipIntro" type="button">Пропустить</button>
+    </div>
+    <div class="intro-center">
+      <p class="author">автор <b>arsenomen</b></p>
+      <h1 class="intro-title" id="introTitle" aria-label="NEURO//CORE">NEURO//CORE</h1>
+      <p class="intro-sub">Симулятор живого нейрона на модели Ходжкина–Хаксли (1952). Стимулируй, отравляй, собирай сети и слушай, как клетки стреляют.</p>
+      <ol class="boot" id="bootLog" aria-live="polite"></ol>
+      <div class="progress"><span id="bootBar"></span></div>
+      <div class="enter-row">
+        <button class="enter" id="enterBtn" type="button" hidden>Войти в лабораторию</button>
+        <span class="hint">звук включится после входа · пробел = импульс</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="app">
+  <header class="bar" style="--i:0">
+    <div class="brand"><b>NEURO<i>//</i>CORE</b><small>HH-1952 · гигантский аксон кальмара</small></div>
+    <div class="seg" id="modeSeg" role="group" aria-label="Режим лаборатории">
+      <button type="button" data-m="single">Нейрон</button>
+      <button type="button" data-m="syn">Синапс</button>
+      <button type="button" data-m="net">Сеть</button>
+    </div>
+    <span class="chip rank" id="rankChip">Звание: Стажёр</span>
+    <span class="chip" id="tChip">t = 0,0 мс</span>
+    <button class="chip" id="tourBtn" type="button">Обучение</button>
+    <button class="chip" id="soundBtn" type="button" aria-pressed="true">Звук: вкл</button>
+  </header>
+
+  <main class="grid">
+    <aside class="panel p-ctrl" style="--i:1">
+      <h2 class="ph">Стимулятор <span id="stimTarget">→ N1</span></h2>
+      <div class="seg full" id="stimSeg" role="group" aria-label="Режим стимуляции">
+        <button type="button" data-m="pulse">Импульс</button>
+        <button type="button" data-m="train">Серия</button>
+        <button type="button" data-m="dc">Постоянный</button>
+      </div>
+      <button class="fire" id="fire" type="button"><span id="fireTxt">Импульс</span><small id="fireSub">пробел</small></button>
+      <div class="field">
+        <label for="amp">Амплитуда <output id="ampO"></output></label>
+        <input type="range" id="amp" min="0" max="1000" step="1" value="224">
+      </div>
+      <div class="field" id="durF">
+        <label for="dur">Длительность импульса <output id="durO"></output></label>
+        <input type="range" id="dur" min="0.1" max="10" step="0.1" value="1">
+      </div>
+      <div class="field" id="freqF">
+        <label for="freq">Частота серии <output id="freqO"></output></label>
+        <input type="range" id="freq" min="2" max="300" step="1" value="25">
+      </div>
+      <div class="sep"></div>
+      <h2 class="ph">Среда</h2>
+      <div class="field">
+        <label for="temp">Температура <output id="tempO"></output></label>
+        <input type="range" id="temp" min="6.3" max="30" step="0.1" value="6.3">
+        <p class="note" id="phiNote"></p>
+      </div>
+      <div class="field">
+        <label for="speed">Скорость времени <output id="speedO"></output></label>
+        <input type="range" id="speed" min="2" max="80" step="1" value="20">
+      </div>
+      <div class="row">
+        <button class="btn" id="pauseBtn" type="button">Пауза</button>
+        <button class="btn" id="resetBtn" type="button">Сброс клеток</button>
+      </div>
+      <div id="synCtl" hidden>
+        <div class="sep"></div>
+        <div id="chainCtl">
+          <h2 class="ph">Синапсы</h2>
+          <div class="synrow"><span>N1 → N2</span>
+            <div class="seg sm" data-syn="0" role="group" aria-label="Тип синапса N1 → N2"><button type="button" data-t="exc">Возб.</button><button type="button" data-t="inh">Торм.</button></div>
+          </div>
+          <div class="synrow"><span>N2 → N3</span>
+            <div class="seg sm" data-syn="1" role="group" aria-label="Тип синапса N2 → N3"><button type="button" data-t="exc">Возб.</button><button type="button" data-t="inh">Торм.</button></div>
+          </div>
+        </div>
+        <div id="netCtl" hidden>
+          <h2 class="ph">Конструктор сети <span id="netCount">0/12</span></h2>
+          <div class="tools" id="tools" role="group" aria-label="Инструменты сети">
+            <button type="button" class="btn" data-tool="select">Выбор</button>
+            <button type="button" class="btn" data-tool="add">+ Нейрон</button>
+            <button type="button" class="btn" data-tool="link">Связь</button>
+            <button type="button" class="btn" data-tool="input">Вход</button>
+            <button type="button" class="btn" data-tool="kick">Пнуть</button>
+            <button type="button" class="btn" data-tool="del">Удалить</button>
+          </div>
+          <p class="note" id="toolHint"></p>
+          <div class="synrow"><span>Новая связь</span>
+            <div class="seg sm" id="linkType" role="group" aria-label="Тип новой связи"><button type="button" data-t="exc">Возб.</button><button type="button" data-t="inh">Торм.</button></div>
+          </div>
+          <div class="presets" id="presets" role="group" aria-label="Готовые сети">
+            <button type="button" class="btn" data-p="ring">Кольцо</button>
+            <button type="button" class="btn" data-p="chain">Цепочка</button>
+            <button type="button" class="btn" data-p="ffi">Торможение</button>
+            <button type="button" class="btn" data-p="random">Случайная</button>
+            <button type="button" class="btn" data-p="clear">Очистить</button>
+          </div>
+          <div class="sep"></div>
+          <h2 class="ph">Головоломки <span id="pzProg">0/5</span></h2>
+          <div class="caselist" id="pzList"></div>
+          <div class="case" id="pzActive" hidden>
+            <small>Собери сеть</small><b id="pzT"></b><p id="pzH"></p>
+            <div class="row" id="pzFire"></div>
+            <button class="btn primary" id="pzCheck" type="button">Проверить сеть</button>
+            <ol class="truth" id="pzRows"></ol>
+            <button class="btn" id="pzExit" type="button">Выйти из головоломки</button>
+          </div>
+          <div class="sep"></div>
+        </div>
+        <div class="field">
+          <label for="gsyn">Сила синапса g<sub>syn</sub> <output id="gsynO"></output></label>
+          <input type="range" id="gsyn" min="0" max="2" step="0.01" value="0.5">
+        </div>
+        <p class="note" id="synNote">Возбуждающий синапс тянет мембрану к 0 мВ, тормозной к −80 мВ. Задержка складывается из проведения по аксону и 0,6 мс на выброс медиатора.</p>
+      </div>
+    </aside>
+
+    <section class="panel p-stage" style="--i:2">
+      <div class="stage-head">
+        <div>
+          <h2 class="ph">Клетка · <span id="stageMode">одиночный нейрон</span></h2>
+          <p class="desc" id="stageDesc"></p>
+        </div>
+        <div class="vread"><span class="vl" id="vLabel">V(N1)</span><b id="vNum">−65,0</b><span class="u">мВ</span></div>
+      </div>
+      <div class="cellwrap" id="cellWrap">
+        <canvas id="cell" aria-label="Анимация нейрона. Нажми на часть клетки, чтобы узнать о ней."></canvas>
+        <div class="legend">
+          <span><i style="--c:var(--na)"></i>Na⁺ внутрь</span>
+          <span><i style="--c:var(--k)"></i>K⁺ наружу</span>
+          <span><i style="--c:var(--spike)"></i>потенциал действия</span>
+        </div>
+        <div class="card" id="card" hidden>
+          <button class="card-x" id="cardX" type="button" aria-label="Закрыть">×</button>
+          <small id="cardK"></small><b id="cardT"></b><p id="cardP"></p><div class="card-live" id="cardL"></div>
+        </div>
+      </div>
+      <div class="stats">
+        <div class="gates">
+          <div class="gate">m<i><b id="gm" style="--c:var(--na)"></b></i></div>
+          <div class="gate">h<i><b id="gh" style="--c:var(--violet)"></b></i></div>
+          <div class="gate">n<i><b id="gn" style="--c:var(--k)"></b></i></div>
+        </div>
+        <span class="stat">спайки <b id="spk">0</b></span>
+        <span class="stat">частота <b id="frq">—</b></span>
+        <span class="stat">E<sub>Na</sub> <b>+50</b></span>
+        <span class="stat">E<sub>K</sub> <b id="ek">−77</b></span>
+      </div>
+    </section>
+
+    <section class="panel p-scope" style="--i:3">
+      <div class="scope-head">
+        <h2 class="ph">Осциллограф · V(t)</h2>
+        <div class="seg sm" id="focusSeg" role="group" aria-label="Нейрон для графиков" hidden>
+          <button type="button" data-f="0">N1</button><button type="button" data-f="1">N2</button><button type="button" data-f="2">N3</button>
+        </div>
+      </div>
+      <div class="scopewrap v" id="svWrap"><canvas id="scopeV" aria-label="График мембранного потенциала"></canvas></div>
+      <div class="scope-head">
+        <div class="seg sm" id="iTab" role="group" aria-label="Второй график">
+          <button type="button" data-t="curr">Ионные токи</button>
+          <button type="button" data-t="gates">Ворота</button>
+          <button type="button" data-t="raster" id="rasterBtn" hidden>Растр</button>
+        </div>
+        <span class="note" id="iNote">N1</span>
+      </div>
+      <div class="scopewrap i" id="siWrap"><canvas id="scopeI" aria-label="График токов, воротных переменных или растр спайков"></canvas></div>
+      <p class="eq"><b>C·dV/dt</b> = I<sub>ст</sub> − g<sub>Na</sub>m³h(V − E<sub>Na</sub>) − g<sub>K</sub>n⁴(V − E<sub>K</sub>) − g<sub>L</sub>(V − E<sub>L</sub>) − I<sub>syn</sub> · RK4, Δt = 0,01 мс</p>
+    </section>
+
+    <aside class="panel p-lab" style="--i:4">
+      <h2 class="ph">Фармакология <span>картриджи</span></h2>
+      <div class="carts">
+        <button type="button" class="cart" data-drug="ttx" style="--c:var(--na)" aria-pressed="false"><span class="code">TTX</span><span class="nm">Тетродотоксин</span><span class="ds">Яд рыбы фугу. Закрывает все Na⁺-каналы.</span></button>
+        <button type="button" class="cart" data-drug="tea" style="--c:var(--k)" aria-pressed="false"><span class="code">TEA</span><span class="nm">Тетраэтиламмоний</span><span class="ds">Блокирует 80% K⁺-каналов: спайк расширяется.</span></button>
+        <button type="button" class="cart" data-drug="lido" style="--c:var(--violet)" aria-pressed="false"><span class="code">LID</span><span class="nm">Лидокаин</span><span class="ds">Анестетик. Оставляет 35% Na⁺-проводимости.</span></button>
+        <button type="button" class="cart" data-drug="hyperk" style="--c:var(--bad)" aria-pressed="false"><span class="code">K⁺↑</span><span class="nm">Гиперкалиемия</span><span class="ds">Избыток K⁺ снаружи: E<sub>K</sub> сдвигается до −60 мВ.</span></button>
+      </div>
+      <div class="sep"></div>
+      <div id="clinic">
+        <h2 class="ph">Клиника <span id="dzProg">0/4</span></h2>
+        <div class="caselist" id="dzList"></div>
+        <div class="case" id="dzActive" hidden>
+          <small id="dzStep"></small><b id="dzT"></b><p id="dzStory"></p><p class="note" id="dzLook"></p>
+          <div class="opts" id="dzOpts"></div>
+          <p class="fb" id="dzFb" hidden></p>
+          <button class="btn" id="dzExit" type="button">Завершить приём</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+      <h2 class="ph">Миссии <span id="mProg">0/13</span></h2>
+      <ol class="missions" id="missions"></ol>
+      <div class="sep"></div>
+      <h2 class="ph">Журнал</h2>
+      <ol class="log" id="log"></ol>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"><small id="toastK">Миссия выполнена</small><b id="toastT"></b></div>
+
+<div class="tour" id="tour" hidden>
+  <div class="tour-spot" id="tourSpot"></div>
+  <div class="tour-card" id="tourCard" role="dialog" aria-labelledby="tourT">
+    <small id="tourN"></small><b id="tourT"></b><p id="tourP"></p>
+    <div class="tour-btns">
+      <button class="btn" id="tourSkip" type="button">Закрыть</button>
+      <button class="btn" id="tourPrev" type="button">Назад</button>
+      <button class="btn primary" id="tourNext" type="button">Далее</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = (s, r = document) => r.querySelector(s);
+const clamp = (x, a, b) => x < a ? a : x > b ? b : x;
+const lerp = (a, b, t) => a + (b - a) * t;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DPR = () => Math.min(window.devicePixelRatio || 1, 2);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+};
+const fmt = (v, d = 1) => {
+  const s = Math.abs(v).toFixed(d).replace('.', ',');
+  return (v < -0.5 * Math.pow(10, -d) ? '−' : '') + s;
+};
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+const distSeg = (px, py, x1, y1, x2, y2) => {
+  const dx = x2 - x1, dy = y2 - y1, L = dx * dx + dy * dy || 1;
+  const t = clamp(((px - x1) * dx + (py - y1) * dy) / L, 0, 1);
+  return Math.hypot(px - x1 - t * dx, py - y1 - t * dy);
+};
+document.body.classList.add('locked');
+
+/* ================= Модель Ходжкина–Хаксли ================= */
+const P = { Cm: 1, gNa: 120, gK: 36, gL: 0.3, ENa: 50, EK: -77, EL: -54.387 };
+const DT = 0.01, SAMPLE = 0.05, HN = 1200, WIN = 50, WS = Math.round(WIN / SAMPLE);
+const TAU_SYN = 3, SYN_DECAY = Math.exp(-DT / TAU_SYN), AXON_T = 2.2, SYN_DELAY = 0.6, MAX_NODES = 12;
+const env = { gNaF: 1, gKF: 1, EK: -77, phi: 1, T: 6.3, inhF: 1 };
+const RT = new Float64Array(6);
+function rates(V, phi) {
+  const a = V + 40, b = V + 55;
+  RT[0] = (Math.abs(a) < 1e-4 ? 1 : 0.1 * a / (1 - Math.exp(-a / 10))) * phi;
+  RT[1] = 4 * Math.exp(-(V + 65) / 18) * phi;
+  RT[2] = 0.07 * Math.exp(-(V + 65) / 20) * phi;
+  RT[3] = phi / (1 + Math.exp(-(V + 35) / 10));
+  RT[4] = (Math.abs(b) < 1e-4 ? 0.1 : 0.01 * b / (1 - Math.exp(-b / 10))) * phi;
+  RT[5] = 0.125 * Math.exp(-(V + 65) / 80) * phi;
+}
+function makeCell() {
+  rates(-65, 1);
+  const m = RT[0] / (RT[0] + RT[1]), h = RT[2] / (RT[2] + RT[3]), n = RT[4] / (RT[4] + RT[5]);
+  const H = {
+    V: new Float32Array(HN).fill(-65), INa: new Float32Array(HN), IK: new Float32Array(HN),
+    m: new Float32Array(HN).fill(m), h: new Float32Array(HN).fill(h), n: new Float32Array(HN).fill(n)
+  };
+  return { V: -65, m, h, n, sE: 0, sI: 0, INa: 0, IK: 0, lastV: -65, upAt: null, spikes: [], count: 0, naAcc: 0, kAcc: 0, H };
+}
+const K1 = new Float64Array(4), K2 = new Float64Array(4), K3 = new Float64Array(4), K4 = new Float64Array(4);
+function deriv(V, m, h, n, I, gE, gI, o) {
+  rates(V, env.phi);
+  const INa = P.gNa * env.gNaF * m * m * m * h * (V - P.ENa);
+  const IK = P.gK * env.gKF * n * n * n * n * (V - env.EK);
+  const IL = P.gL * (V - P.EL);
+  // возбуждающий синапс: E = 0 мВ, тормозной: E = −80 мВ
+  o[0] = (I - INa - IK - IL - gE * V - gI * (V + 80)) / P.Cm;
+  o[1] = RT[0] * (1 - m) - RT[1] * m;
+  o[2] = RT[2] * (1 - h) - RT[3] * h;
+  o[3] = RT[4] * (1 - n) - RT[5] * n;
+}
+function step(c, dt, I, gE, gI) {
+  const V = c.V, m = c.m, h = c.h, n = c.n, d2 = dt / 2;
+  deriv(V, m, h, n, I, gE, gI, K1);
+  deriv(V + K1[0] * d2, m + K1[1] * d2, h + K1[2] * d2, n + K1[3] * d2, I, gE, gI, K2);
+  deriv(V + K2[0] * d2, m + K2[1] * d2, h + K2[2] * d2, n + K2[3] * d2, I, gE, gI, K3);
+  deriv(V + K3[0] * dt, m + K3[1] * dt, h + K3[2] * dt, n + K3[3] * dt, I, gE, gI, K4);
+  const d6 = dt / 6;
+  c.V = V + d6 * (K1[0] + 2 * K2[0] + 2 * K3[0] + K4[0]);
+  c.m = clamp(m + d6 * (K1[1] + 2 * K2[1] + 2 * K3[1] + K4[1]), 0, 1);
+  c.h = clamp(h + d6 * (K1[2] + 2 * K2[2] + 2 * K3[2] + K4[2]), 0, 1);
+  c.n = clamp(n + d6 * (K1[3] + 2 * K2[3] + 2 * K3[3] + K4[3]), 0, 1);
+  c.INa = P.gNa * env.gNaF * c.m * c.m * c.m * c.h * (c.V - P.ENa);
+  c.IK = P.gK * env.gKF * Math.pow(c.n, 4) * (c.V - env.EK);
+  c.naAcc += Math.abs(Math.min(c.INa, 0)) * dt * 0.11;
+  c.kAcc += Math.max(c.IK, 0) * dt * 0.11;
+}
+
+/* ================= Состояние ================= */
+let mode = 'single', cells = [makeCell()], simT = 0, sampleAcc = 0, hi = 0, running = true, entered = false;
+const stimH = new Float32Array(HN);
+const stim = { mode: 'train', amp: 10, dur: 1, freq: 25, on: true, dcStart: 0, nextTrain: 2, speed: 20 };
+let pulses = [], releases = [], axPulses = [], kicks = [], links = [], netNodes = [];
+const synType = ['exc', 'exc'];
+let gsyn = 0.5, focus = 0, iTab = 'curr', lastManual = null, lastExternal = 0;
+let netTool = 'select', linkInh = false, linkFrom = -1, selNode = -1, userNodes = 0, userLinks = 0;
+const drugs = { ttx: false, tea: false, lido: false, hyperk: false };
+const noDrugs = () => !drugs.ttx && !drugs.tea && !drugs.lido && !drugs.hyperk;
+// болезнь пациента из «Клиники» поверх препаратов: множители каналов, сдвиг E_K, сила ГАМК, демиелинизация
+const dz = { gNaF: 1, EK: null, inhF: 1, ms: null, ramps: [] };
+let activeCase = null, activePz = null;
+
+function updateEnv() {
+  env.gNaF = (drugs.ttx ? 0 : (drugs.lido ? 0.35 : 1)) * dz.gNaF;
+  env.gKF = drugs.tea ? 0.2 : 1;
+  env.EK = dz.EK != null ? dz.EK : (drugs.hyperk ? -60 : -77);
+  env.inhF = dz.inhF;
+  env.phi = Math.pow(3, (env.T - 6.3) / 10);
+}
+// синапсы суммируются линейно, иначе два одновременных входа почти не сильнее одного
+const deliver = (c, inh) => { if (inh) c.sI = Math.min(4, c.sI + 0.8); else c.sE = Math.min(4, c.sE + 0.8); };
+const isInput = i => mode === 'net' ? !!(netNodes[i] && netNodes[i].input) : i === 0;
+function chainLinks() {
+  links = mode === 'syn' ? [{ from: 0, to: 1, inh: synType[0] === 'inh' }, { from: 1, to: 2, inh: synType[1] === 'inh' }] : [];
+}
+function linkDelay(l) {
+  if (l.dl) return l.dl;
+  if (mode !== 'net') return AXON_T + SYN_DELAY;
+  const a = netNodes[l.from], b = netNodes[l.to];
+  return SYN_DELAY + 4.5 * Math.hypot(a.x - b.x, a.y - b.y);
+}
+function addPulse(t0, manual) {
+  const p = { t0, t1: t0 + stim.dur, amp: stim.amp, manual, spiked: false, checked: false, ttx: drugs.ttx, prev: manual ? lastManual : null };
+  pulses.push(p);
+  if (manual) lastManual = p;
+}
+function stimAt(t) {
+  let I = 0;
+  if (stim.mode === 'dc' && stim.on) I += stim.amp;
+  for (let i = 0; i < pulses.length; i++) { const p = pulses[i]; if (t >= p.t0 && t < p.t1) I += p.amp; }
+  return I;
+}
+function record(I) {
+  for (const c of cells) {
+    c.H.V[hi] = c.V; c.H.INa[hi] = c.INa; c.H.IK[hi] = c.IK;
+    c.H.m[hi] = c.m; c.H.h[hi] = c.h; c.H.n[hi] = c.n;
+  }
+  stimH[hi] = I; hi = (hi + 1) % HN;
+}
+function simulate(ms) {
+  let steps = Math.round(ms / DT);
+  while (steps-- > 0) {
+    if (stim.mode === 'train' && stim.on && simT >= stim.nextTrain) {
+      addPulse(stim.nextTrain, false);
+      stim.nextTrain += 1000 / stim.freq;
+      if (stim.nextTrain < simT) stim.nextTrain = simT + 1000 / stim.freq;
+    }
+    const Is = stimAt(simT);
+    let ext = false;
+    for (let r = releases.length - 1; r >= 0; r--) {
+      const e = releases[r];
+      if (e.t > simT) continue;
+      const c = cells[e.to];
+      if (c) deliver(c, e.inh);
+      releases.splice(r, 1);
+    }
+    for (let i = 0; i < cells.length; i++) {
+      const c = cells[i];
+      let I = isInput(i) ? Is : 0;
+      for (let k = 0; k < kicks.length; k++) { const q = kicks[k]; if (q.cell === i && simT >= q.t0 && simT < q.t1) I += q.amp; }
+      if (I > 0) ext = true;
+      step(c, DT, I, gsyn * c.sE, gsyn * env.inhF * c.sI);
+      c.sE *= SYN_DECAY; c.sI *= SYN_DECAY;
+      if (c.lastV < 0 && c.V >= 0) onSpike(i, simT);
+      if (c.lastV < -20 && c.V >= -20) c.upAt = simT;
+      else if (c.lastV >= -20 && c.V < -20 && c.upAt != null) {
+        const wd = simT - c.upAt; c.upAt = null;
+        if (i === 0 && mode !== 'net' && drugs.tea && wd > 2.4) complete('tea');
+      }
+      c.lastV = c.V;
+    }
+    if (ext) lastExternal = simT;
+    simT += DT;
+    sampleAcc += DT;
+    if (sampleAcc >= SAMPLE - 1e-9) { sampleAcc -= SAMPLE; record(Is); missionTick(); diseaseTick(); }
+  }
+}
+
+/* ================= Звук ================= */
+let actx = null, master = null, noiseBuf = null, soundOn = store.get('nc-sound', true), lastBlip = 0;
+const SCALE = [261.6, 293.7, 329.6, 392, 440, 523.3, 587.3, 659.3, 784, 880, 1046.5, 1174.7];
+function initAudio() {
+  if (actx) return;
+  try {
+    actx = new (window.AudioContext || window.webkitAudioContext)();
+    master = actx.createGain(); master.gain.value = soundOn ? 0.55 : 0;
+    const comp = actx.createDynamicsCompressor();
+    master.connect(comp); comp.connect(actx.destination);
+    noiseBuf = actx.createBuffer(1, Math.floor(actx.sampleRate * 0.04), actx.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 3);
+  } catch (e) { actx = null; }
+}
+function blip(freq, pan = 0, vol = 1) {
+  if (!actx || !soundOn) return;
+  const now = performance.now();
+  if (now - lastBlip < 28) return;
+  lastBlip = now;
+  const t = actx.currentTime;
+  let out = master;
+  if (actx.createStereoPanner) { const p = actx.createStereoPanner(); p.pan.value = clamp(pan, -1, 1); p.connect(master); out = p; }
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'triangle';
+  o.frequency.setValueAtTime(freq * 2.2, t);
+  o.frequency.exponentialRampToValueAtTime(freq, t + 0.035);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(0.32 * vol, t + 0.004);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+  o.connect(g); g.connect(out); o.start(t); o.stop(t + 0.3);
+  const ns = actx.createBufferSource(), hp = actx.createBiquadFilter(), ng = actx.createGain();
+  ns.buffer = noiseBuf; hp.type = 'highpass'; hp.frequency.value = 2400; ng.gain.value = 0.22 * vol;
+  ns.connect(hp); hp.connect(ng); ng.connect(out); ns.start(t);
+}
+function chord(notes = [523.25, 659.25, 783.99, 1046.5]) {
+  if (!actx || !soundOn) return;
+  notes.forEach((f, i) => {
+    const t = actx.currentTime + i * 0.07, o = actx.createOscillator(), g = actx.createGain();
+    o.type = 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + 0.65);
+  });
+}
+function bootSound() {
+  if (!actx || !soundOn) return;
+  const t = actx.currentTime, o = actx.createOscillator(), f = actx.createBiquadFilter(), g = actx.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t); o.frequency.exponentialRampToValueAtTime(880, t + 0.8);
+  f.type = 'lowpass'; f.frequency.setValueAtTime(300, t); f.frequency.exponentialRampToValueAtTime(5000, t + 0.8);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.1);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0);
+  o.connect(f); f.connect(g); g.connect(master); o.start(t); o.stop(t + 1.05);
+}
+
+/* ================= События ================= */
+const logEl = $('#log');
+let lastSpikeLog = 0;
+function log(msg, cls = '') {
+  const li = document.createElement('li');
+  li.className = cls;
+  const tm = document.createElement('time'); tm.textContent = fmt(simT, 1) + ' мс';
+  const sp = document.createElement('span'); sp.textContent = msg;
+  li.append(tm, sp); logEl.prepend(li);
+  while (logEl.children.length > 40) logEl.lastChild.remove();
+}
+function onSpike(i, t) {
+  const c = cells[i];
+  const prev = c.spikes.length ? c.spikes[c.spikes.length - 1] : null;
+  c.spikes.push(t); if (c.spikes.length > 30) c.spikes.shift();
+  c.count++;
+  if (mode === 'net') {
+    for (const l of links) if (l.from === i) {
+      const dl = linkDelay(l);
+      releases.push({ to: l.to, t: t + dl, inh: l.inh });
+      axPulses.push({ link: l, t0: t, dl });
+    }
+    const n = netNodes[i];
+    blip(SCALE[i % SCALE.length], n ? (n.x - 0.5) * 1.4 : 0, 0.8);
+  } else {
+    // рассеянный склероз: импульс идёт медленнее и может погаснуть на оголённом участке
+    const T = dz.ms ? AXON_T * dz.ms.slow : AXON_T;
+    const block = dz.ms && Math.random() < dz.ms.block ? 0.25 + Math.random() * 0.6 : null;
+    axPulses.push({ cell: i, t0: t, T, block, released: false });
+    if (block == null) for (const l of links) if (l.from === i) releases.push({ to: l.to, t: t + T + SYN_DELAY, inh: l.inh });
+    if (mode === 'single') {
+      const rate = prev != null ? 1000 / (t - prev) : 0;
+      blip(170 * Math.pow(2, clamp(rate, 0, 260) / 85), 0);
+    } else {
+      blip([329.6, 440, 587.3][i], (i - 1) * 0.6, 0.85);
+    }
+  }
+  const now = performance.now();
+  if (now - lastSpikeLog > 220) {
+    lastSpikeLog = now;
+    log(mode === 'single' ? `Спайк #${c.count}` : `Спайк N${i + 1} #${c.count}`, 'spike');
+  }
+  if (i === 0 && mode !== 'net') {
+    const hits = pulses.filter(p => t >= p.t0 && t <= p.t1 + 8);
+    hits.forEach(p => { p.spiked = true; });
+    const manual = hits.filter(p => p.manual);
+    if (manual.length) complete('first');
+    if (stim.mode === 'pulse' && manual.length === 1) {
+      const p = manual[0];
+      const others = pulses.some(q => q !== p && q.t1 > p.t0 - 20 && q.t0 <= t);
+      if (!others && p.amp <= 4.0001) complete('thresh');
+    }
+    const s = c.spikes, n = s.length;
+    if (n >= 4 && s[n - 1] - s[n - 2] < 10 && s[n - 2] - s[n - 3] < 10 && s[n - 3] - s[n - 4] < 10) complete('fast');
+  }
+  if (mode === 'syn' && i === 2) complete('relay');
+  if (mode === 'net') {
+    let k = 0;
+    for (const q of cells) if (q.spikes.length && t - q.spikes[q.spikes.length - 1] <= 60) k++;
+    if (k >= 5) complete('wave');
+  }
+}
+
+/* ================= Миссии и звания ================= */
+const LEVELS = [
+  { name: 'Стажёр', missions: [
+    { id: 'first', t: 'Первый разряд', h: 'Выбери режим «Импульс» и нажми кнопку (или пробел), чтобы вызвать потенциал действия.' },
+    { id: 'thresh', t: 'Слабо, но долго', h: 'Вызови спайк одиночным импульсом не сильнее 4 мкА/см². Подсказка: растяни длительность.' },
+    { id: 'fast', t: 'Сто герц', h: 'Три межспайковых интервала подряд короче 10 мс. Попробуй постоянный ток около 50 мкА/см².' },
+    { id: 'refract', t: 'Рефрактерность', h: 'В режиме «Импульс» подай два импульса от 10 мкА/см² с разницей меньше 8 мс: второй не должен сработать. Сбавь скорость времени до 2–4 мс/с.' }
+  ] },
+  { name: 'Лаборант', missions: [
+    { id: 'ttx', t: 'Яд фугу', h: 'Введи TTX и подай импульс от 20 мкА/см². Клетка должна промолчать.' },
+    { id: 'tea', t: 'Широкий спайк', h: 'Введи TEA и вызови спайк шире 2,4 мс на уровне −20 мВ. Без K⁺-тока реполяризация затягивается.' },
+    { id: 'block', t: 'Деполяризационный блок', h: 'Без блокаторов Na⁺ подай такой сильный постоянный ток, чтобы нейрон замолчал выше −55 мВ на 30 мс.' },
+    { id: 'heat', t: 'Тепловой блок', h: 'Без препаратов нагрей клетку выше 27,5 °C и подай импульс от 20 мкА/см²: каналы закроются раньше, чем родится спайк.' }
+  ] },
+  { name: 'Нейроинженер', missions: [
+    { id: 'relay', t: 'Эстафета', h: 'В режиме «Синапс» передай сигнал по цепочке до N3.' },
+    { id: 'inhib', t: 'Тормоз', h: 'Сделай синапс N1 → N2 тормозным и опусти потенциал N2 ниже −69 мВ.' },
+    { id: 'netbuild', t: 'Конструктор', h: 'В режиме «Сеть» вручную поставь 3 нейрона и проведи 3 связи.' },
+    { id: 'wave', t: 'Волна', h: 'В режиме «Сеть» добейся, чтобы 5 разных нейронов выстрелили за 60 мс.' },
+    { id: 'reverb', t: 'Эхо в кольце', h: 'Замкни нейроны в кольцо, запусти активность и выключи стимулятор: она должна прожить ещё 200 мс сама.' }
+  ] }
+];
+const ALL_M = LEVELS.flatMap(l => l.missions);
+const RANKS = ['Стажёр', 'Лаборант', 'Нейроинженер', 'Архитектор сознания'];
+const done = new Set(store.get('nc-missions', []));
+const levelOf = id => LEVELS.findIndex(l => l.missions.some(m => m.id === id));
+const levelDone = li => LEVELS[li].missions.every(m => done.has(m.id));
+const unlocked = li => { for (let k = 0; k < li; k++) if (!levelDone(k)) return false; return true; };
+const rankIdx = () => { let r = 0; while (r < LEVELS.length && levelDone(r)) r++; return r; };
+const mEl = $('#missions');
+function renderMissions() {
+  mEl.innerHTML = '';
+  LEVELS.forEach((lv, li) => {
+    const open = unlocked(li), n = lv.missions.filter(m => done.has(m.id)).length;
+    const head = document.createElement('li');
+    head.className = 'lvl' + (open ? '' : ' locked');
+    const a = document.createElement('b'); a.style.fontWeight = '600'; a.textContent = `Уровень ${li + 1} · ${lv.name}`;
+    const b = document.createElement('span'); b.textContent = open ? `${n}/${lv.missions.length}` : 'закрыт';
+    head.append(a, b); mEl.appendChild(head);
+    for (const m of lv.missions) {
+      const li2 = document.createElement('li');
+      li2.className = (done.has(m.id) ? 'done' : '') + (open ? '' : ' locked');
+      li2.innerHTML = '<span class="dot"></span><div><div class="t"></div><div class="h"></div></div>';
+      li2.querySelector('.t').textContent = m.t;
+      li2.querySelector('.h').textContent = open ? m.h : `Откроется после уровня ${li}.`;
+      mEl.appendChild(li2);
+    }
+  });
+  $('#mProg').textContent = `${done.size}/${ALL_M.length}`;
+  $('#rankChip').textContent = 'Звание: ' + RANKS[rankIdx()];
+}
+let toastTimer = 0;
+function toast(kind, text) {
+  $('#toastK').textContent = kind; $('#toastT').textContent = text;
+  const t = $('#toast'); t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+function complete(id) {
+  if (done.has(id) || !entered || !unlocked(levelOf(id))) return;
+  const before = rankIdx();
+  done.add(id); store.set('nc-missions', [...done]);
+  const m = ALL_M.find(x => x.id === id);
+  renderMissions();
+  log(`Миссия выполнена: ${m.t}`, 'ok');
+  const after = rankIdx();
+  if (after > before) {
+    toast('Новое звание', RANKS[after]);
+    log(`Новое звание: ${RANKS[after]}`, 'ok');
+    chord([392, 523.25, 659.25, 783.99, 1046.5, 1318.5]);
+  } else {
+    toast('Миссия выполнена', m.t);
+    chord();
+  }
+}
+function missionTick() {
+  for (const p of pulses) {
+    if (p.manual && !p.checked && simT > p.t1 + 10) {
+      p.checked = true;
+      if (p.spiked || mode === 'net') continue;
+      if (p.ttx && drugs.ttx && p.amp >= 20) complete('ttx');
+      if (p.amp >= 20 && env.T >= 27.5 && noDrugs()) complete('heat');
+      if (p.amp >= 10 && stim.mode === 'pulse' && p.prev && p.prev.spiked && p.t0 - p.prev.t0 <= 8) complete('refract');
+    }
+  }
+  if (mode !== 'net' && stim.mode === 'dc' && stim.on && !drugs.ttx && !drugs.lido && stim.amp >= 40) {
+    const c = cells[0], last = c.spikes.length ? c.spikes[c.spikes.length - 1] : -1e9;
+    if (simT - stim.dcStart > 40 && simT - Math.max(last, stim.dcStart) >= 30 && c.V > -55) complete('block');
+  }
+  if (mode === 'syn' && synType[0] === 'inh' && cells[1] && cells[1].V < -69) complete('inhib');
+  if (mode === 'net' && lastExternal > 0 && simT - lastExternal > 200 &&
+      cells.some(c => c.spikes.length && simT - c.spikes[c.spikes.length - 1] < 20)) complete('reverb');
+}
+function checkBuild() { if (userNodes >= 3 && userLinks >= 3) complete('netbuild'); }
+
+/* ================= Геометрия нейрона ================= */
+function buildNeuron(seed, cx, cy, R, axEnd, o = {}) {
+  const rng = mulberry32(seed);
+  const depthMax = o.depth ?? 3, nD = o.nD ?? 6, dl = o.dl ?? 2.1;
+  const segs = [];
+  const grow = (x, y, a, len, w, d) => {
+    const x2 = x + Math.cos(a) * len, y2 = y + Math.sin(a) * len, bend = (rng() - 0.5) * len * 0.45;
+    const qx = (x + x2) / 2 + Math.cos(a + Math.PI / 2) * bend, qy = (y + y2) / 2 + Math.sin(a + Math.PI / 2) * bend;
+    segs.push({ x1: x, y1: y, qx, qy, x2, y2, w, d });
+    if (d < depthMax) {
+      const k = (d === 0 && rng() < 0.5) ? 3 : 2;
+      for (let j = 0; j < k; j++) {
+        const sp = k === 3 ? (j - 1) * 0.55 : (j ? 1 : -1) * (0.28 + rng() * 0.32);
+        grow(x2, y2, a + sp + (rng() - 0.5) * 0.2, len * (0.6 + rng() * 0.15), w * 0.62, d + 1);
+      }
+    }
+  };
+  for (let i = 0; i < nD; i++) {
+    const a = Math.PI + (nD === 1 ? 0 : (i / (nD - 1) - 0.5)) * 2.5 + (rng() - 0.5) * 0.25;
+    grow(cx + Math.cos(a) * R * 0.85, cy + Math.sin(a) * R * 0.85, a, R * dl * (0.8 + rng() * 0.4), R * 0.34, 0);
+  }
+  const N = 72, ax = [], ph = rng() * 6.28, x0 = cx + R * 0.95;
+  for (let i = 0; i < N; i++) {
+    const t = i / (N - 1);
+    ax.push({ x: lerp(x0, axEnd, t), y: cy + Math.sin(t * Math.PI * 1.6 + ph) * R * 0.35 * Math.sin(t * Math.PI) });
+  }
+  const end = ax[N - 1], term = [], bout = [], tn = o.terminals ?? 3;
+  for (let j = 0; j < tn; j++) {
+    const a = (tn === 1 ? 0 : (j / (tn - 1) - 0.5)) * 1.3, L = R * (0.7 + rng() * 0.3) * (o.tl ?? 1);
+    const x2 = end.x + Math.cos(a) * L, y2 = end.y + Math.sin(a) * L;
+    term.push({ x1: end.x, y1: end.y, x2, y2 }); bout.push({ x: x2, y: y2 });
+  }
+  const dPaths = [];
+  for (let d = 0; d <= depthMax; d++) dPaths.push({ p: new Path2D(), w: R * 0.34 * Math.pow(0.62, d) });
+  for (const s of segs) { const p = dPaths[s.d].p; p.moveTo(s.x1, s.y1); p.quadraticCurveTo(s.qx, s.qy, s.x2, s.y2); }
+  const axPath = new Path2D();
+  ax.forEach((q, i) => i ? axPath.lineTo(q.x, q.y) : axPath.moveTo(q.x, q.y));
+  const tPath = new Path2D();
+  term.forEach(t => { tPath.moveTo(t.x1, t.y1); tPath.lineTo(t.x2, t.y2); });
+  const K = o.myelin || 0, sheaths = [];
+  for (let k = 0; k < K; k++) {
+    const i0 = Math.round((k + 0.14) / K * (N - 1)), i1 = Math.round((k + 0.86) / K * (N - 1));
+    const p = new Path2D();
+    for (let i = i0; i <= i1; i++) i === i0 ? p.moveTo(ax[i].x, ax[i].y) : p.lineTo(ax[i].x, ax[i].y);
+    sheaths.push(p);
+  }
+  return { cx, cy, R, segs, dPaths, ax, axPath, term, tPath, bout, K, sheaths, inPt: null };
+}
+function axonPoint(g, q) {
+  const f = clamp(q, 0, 1) * (g.ax.length - 1), i = Math.min(Math.floor(f), g.ax.length - 2), r = f - i;
+  return { x: lerp(g.ax[i].x, g.ax[i + 1].x, r), y: lerp(g.ax[i].y, g.ax[i + 1].y, r) };
+}
+function bez(s, t) {
+  const u = 1 - t;
+  return { x: u * u * s.x1 + 2 * u * t * s.qx + t * t * s.x2, y: u * u * s.y1 + 2 * u * t * s.qy + t * t * s.y2 };
+}
+
+/* ================= Холсты и вид ================= */
+function makeCanvas(el) { return { el, ctx: el.getContext('2d'), w: 1, h: 1 }; }
+function sizeCanvas(o) {
+  const r = o.el.getBoundingClientRect(), d = DPR();
+  o.w = Math.max(1, r.width); o.h = Math.max(1, r.height);
+  o.el.width = Math.round(o.w * d); o.el.height = Math.round(o.h * d);
+}
+const cv = makeCanvas($('#cell')), sv = makeCanvas($('#scopeV')), si = makeCanvas($('#scopeI'));
+const cellWrap = $('#cellWrap');
+let geos = [], vert = false;
+const CELLC = ['#3fe0ff', '#a58bff', '#ff5ad1'];
+const nodeColor = i => i < 3 ? CELLC[i] : `hsl(${(200 + i * 53) % 360},90%,66%)`;
+const NCH = 14;
+const chanAng = k => k / NCH * Math.PI * 2 + 0.22;
+// узкий экран: клетка рисуется повёрнутой на 90°, аксон идёт сверху вниз
+function applyView(ctx) {
+  const d = DPR(); ctx.setTransform(d, 0, 0, d, 0, 0);
+  if (vert) { ctx.translate(cv.w, 0); ctx.rotate(Math.PI / 2); }
+}
+const toLayout = (x, y) => vert ? { x: y, y: cv.w - x } : { x, y };
+const toScreen = (x, y) => vert ? { x: cv.w - y, y: x } : { x, y };
+function txt(ctx, s, x, y, dx = 0, dy = 0) {
+  if (!vert) { ctx.fillText(s, x + dx, y + dy); return; }
+  ctx.save(); ctx.translate(x, y); ctx.rotate(-Math.PI / 2); ctx.fillText(s, dx, dy); ctx.restore();
+}
+
+function layoutCell() {
+  vert = mode !== 'net' && cv.w < 560 && cv.h > cv.w;
+  const w = vert ? cv.h : cv.w, h = vert ? cv.w : cv.h;
+  geos = [];
+  if (mode === 'single') {
+    const R = clamp(Math.min(w * 0.06, h * 0.085), 12, 34);
+    const cx = clamp(w * 0.3, R * 5.6, w * 0.45);
+    geos.push(buildNeuron(7, cx, h * 0.47, R, w - R * 2.4, { myelin: w > 480 ? 6 : 4, nD: 6, depth: 3, terminals: 4 }));
+  } else if (mode === 'syn') {
+    const sw = w / 3;
+    for (let i = 0; i < 3; i++) {
+      const x0 = i * sw, R = clamp(Math.min(sw * 0.085, h * 0.08), 7, 22), cx = x0 + sw * 0.42;
+      const axEnd = i < 2 ? (i + 1) * sw + sw * 0.42 - R * 5.5 : x0 + sw - R * 1.3;
+      geos.push(buildNeuron(11 + i * 5, cx, h * 0.47, R, axEnd, { myelin: 3, nD: 5, depth: 2, dl: 1.9, terminals: i < 2 ? 1 : 3, tl: i < 2 ? 0.45 : 0.8 }));
+    }
+    for (let i = 1; i < 3; i++) {
+      const g = geos[i], e = geos[i - 1].bout[0];
+      let best = g.segs[0], bd = 1e9;
+      for (const s of g.segs) { const d = Math.hypot(s.x2 - e.x, s.y2 - e.y); if (d < bd) { bd = d; best = s; } }
+      g.inPt = { x: best.x2, y: best.y2 };
+    }
+  }
+}
+function resizeAll() { sizeCanvas(cv); sizeCanvas(sv); sizeCanvas(si); layoutCell(); hideCard(); }
+
+/* ================= Отрисовка клетки ================= */
+function vRGB(V) {
+  const u = clamp((V + 72) / 100, 0, 1);
+  if (u < 0.5) { const t = u / 0.5; return [lerp(40, 150, t), lerp(140, 120, t), lerp(210, 255, t)]; }
+  const t = (u - 0.5) / 0.5; return [lerp(150, 255, t), lerp(120, 205, t * t), lerp(255, 240, t)];
+}
+const rgba = (c, a) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`;
+const parts = [];
+const plankton = Array.from({ length: 46 }, () => ({ x: Math.random(), y: Math.random(), v: 0.004 + Math.random() * 0.01, r: Math.random() * 6.28, s: 0.6 + Math.random() * 1.4 }));
+
+function spawnIons(g, c) {
+  let nNa = Math.floor(c.naAcc), nK = Math.floor(c.kAcc);
+  c.naAcc -= nNa; c.kAcc -= nK;
+  nNa = Math.min(nNa, 40); nK = Math.min(nK, 40);
+  if (parts.length > 900) return;
+  for (let j = 0; j < nNa; j++) {
+    const k = 2 * Math.floor(Math.random() * NCH / 2), a = chanAng(k) + (Math.random() - 0.5) * 0.12;
+    parts.push({ ty: 0, cx: g.cx, cy: g.cy, a, r0: g.R * (1.9 + Math.random() * 0.8), r1: g.R * (0.35 + Math.random() * 0.3), t: 0, life: 0.6 + Math.random() * 0.4, col: '63,224,255', sz: g.R / 24 });
+  }
+  for (let j = 0; j < nK; j++) {
+    const k = 2 * Math.floor(Math.random() * NCH / 2) + 1, a = chanAng(k) + (Math.random() - 0.5) * 0.12;
+    parts.push({ ty: 0, cx: g.cx, cy: g.cy, a, r0: g.R * (0.45 + Math.random() * 0.3), r1: g.R * (1.9 + Math.random() * 0.9), t: 0, life: 0.7 + Math.random() * 0.4, col: '255,181,71', sz: g.R / 24 });
+  }
+}
+function spawnVesicles(from, to, R) {
+  for (let j = 0; j < 14; j++) {
+    parts.push({ ty: 1, x0: from.x + (Math.random() - 0.5) * R * 0.5, y0: from.y + (Math.random() - 0.5) * R * 0.5, x1: to.x + (Math.random() - 0.5) * R * 0.7, y1: to.y + (Math.random() - 0.5) * R * 0.7, t: -Math.random() * 0.25, life: 0.45 + Math.random() * 0.3, col: '214,200,255', sz: R / 14 });
+  }
+}
+function salt(f, K) {
+  if (!K) return f;
+  const seg = f * K, i = Math.floor(seg), fr = seg - i;
+  const e = clamp((fr - 0.55) / 0.45, 0, 1);
+  return (i + e * e * (3 - 2 * e)) / K;
+}
+function glowDot(ctx, x, y, rr, inner, outer) {
+  const gr = ctx.createRadialGradient(x, y, 0, x, y, rr);
+  gr.addColorStop(0, inner); gr.addColorStop(1, outer);
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, rr, 0, 6.283); ctx.fill();
+}
+function drawSoma(ctx, cx, cy, R, c) {
+  const col = vRGB(c.V), u = clamp((c.V + 72) / 100, 0, 1);
+  ctx.globalCompositeOperation = 'lighter';
+  const halo = R * (2.6 + 1.6 * u);
+  glowDot(ctx, cx, cy, halo, rgba(col, 0.18 + 0.5 * u * u), rgba(col, 0));
+  ctx.globalCompositeOperation = 'source-over';
+  const gr = ctx.createRadialGradient(cx - R * 0.3, cy - R * 0.35, R * 0.1, cx, cy, R * 1.05);
+  gr.addColorStop(0, rgba(col, 0.95)); gr.addColorStop(0.55, rgba(col, 0.42)); gr.addColorStop(1, 'rgba(8,26,44,0.9)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = rgba(col, 0.9); ctx.lineWidth = Math.max(1, R * 0.07); ctx.stroke();
+  ctx.fillStyle = 'rgba(3,10,20,0.45)'; ctx.strokeStyle = 'rgba(210,240,255,0.35)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx + R * 0.08, cy + R * 0.05, R * 0.36, 0, 6.283); ctx.fill(); ctx.stroke();
+  // ионные каналы: щель между половинками = доля открытых каналов
+  const pNa = clamp(c.m * c.m * c.m * c.h / 0.3, 0, 1) * env.gNaF, pK = clamp(Math.pow(c.n, 4) / 0.4, 0, 1) * env.gKF;
+  const pw = Math.max(1.4, R * 0.09), phh = Math.max(3, R * 0.32);
+  for (let k = 0; k < NCH; k++) {
+    const a = chanAng(k), isNa = k % 2 === 0, open = isNa ? pNa : pK;
+    const blocked = isNa ? env.gNaF < 0.5 : env.gKF < 0.5;
+    ctx.save();
+    ctx.translate(cx + Math.cos(a) * R, cy + Math.sin(a) * R); ctx.rotate(a + Math.PI / 2);
+    const gap = 1 + open * R * 0.2;
+    ctx.fillStyle = isNa ? `rgba(63,224,255,${0.35 + 0.65 * open})` : `rgba(255,181,71,${0.35 + 0.65 * open})`;
+    ctx.fillRect(-gap / 2 - pw, -phh / 2, pw, phh); ctx.fillRect(gap / 2, -phh / 2, pw, phh);
+    if (blocked) { ctx.fillStyle = 'rgba(255,240,250,0.9)'; ctx.beginPath(); ctx.arc(0, -phh * 0.45, Math.max(1.2, pw * 0.7), 0, 6.283); ctx.fill(); }
+    ctx.restore();
+  }
+}
+function drawNeuron(ctx, g, c, i) {
+  const col = vRGB(c.V), u = clamp((c.V + 72) / 100, 0, 1);
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.globalCompositeOperation = 'lighter';
+  for (const d of g.dPaths) { ctx.strokeStyle = rgba(col, 0.07 + 0.22 * u); ctx.lineWidth = d.w * 3.4 + 2; ctx.stroke(d.p); }
+  ctx.globalCompositeOperation = 'source-over';
+  for (const d of g.dPaths) { ctx.strokeStyle = rgba(col, 0.6 + 0.35 * u); ctx.lineWidth = Math.max(0.8, d.w); ctx.stroke(d.p); }
+  if (g.inPt) {
+    ctx.globalCompositeOperation = 'lighter';
+    if (c.sE > 0.01) glowDot(ctx, g.inPt.x, g.inPt.y, g.R * (0.6 + 1.6 * c.sE), `rgba(109,255,180,${0.7 * c.sE + 0.1})`, 'rgba(0,0,0,0)');
+    if (c.sI > 0.01) glowDot(ctx, g.inPt.x, g.inPt.y, g.R * (0.6 + 1.6 * c.sI), `rgba(255,107,122,${0.7 * c.sI + 0.1})`, 'rgba(0,0,0,0)');
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  const aw = Math.max(1.2, g.R * 0.2);
+  ctx.strokeStyle = rgba(col, 0.75); ctx.lineWidth = aw; ctx.stroke(g.axPath);
+  ctx.lineWidth = Math.max(0.8, aw * 0.7); ctx.stroke(g.tPath);
+  g.sheaths.forEach((s, k) => {
+    if (dz.ms && (k + i) % 2 === 0) {
+      // демиелинизированный участок: от оболочки остались обрывки
+      ctx.setLineDash([g.R * 0.25, g.R * 0.45]); ctx.strokeStyle = 'rgba(255,107,122,0.4)'; ctx.lineWidth = g.R * 0.5;
+      ctx.stroke(s); ctx.setLineDash([]);
+      return;
+    }
+    ctx.strokeStyle = 'rgba(120,200,235,0.32)'; ctx.lineWidth = g.R * 0.62; ctx.stroke(s);
+    ctx.strokeStyle = 'rgba(10,32,50,0.97)'; ctx.lineWidth = g.R * 0.5; ctx.stroke(s);
+    ctx.strokeStyle = 'rgba(120,200,235,0.10)'; ctx.lineWidth = g.R * 0.16; ctx.stroke(s);
+  });
+  for (const b of g.bout) {
+    ctx.fillStyle = rgba(col, 0.85); ctx.beginPath(); ctx.arc(b.x, b.y, Math.max(2, g.R * 0.2), 0, 6.283); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of axPulses) {
+    if (p.cell !== i) continue;
+    const f = (simT - p.t0) / (p.T || AXON_T);
+    if (f < 0) continue;
+    if (p.block != null && f >= p.block) {
+      const e = 1 - (f - p.block) / 0.2;
+      if (e > 0) { const pt = axonPoint(g, salt(p.block, g.K)); glowDot(ctx, pt.x, pt.y, g.R * (0.8 + 0.8 * (1 - e)), `rgba(255,107,122,${0.75 * e})`, 'rgba(255,107,122,0)'); }
+      continue;
+    }
+    if (f <= 1) {
+      const q = salt(f, g.K), pt = axonPoint(g, q);
+      glowDot(ctx, pt.x, pt.y, g.R * 1.3, 'rgba(255,225,248,0.95)', 'rgba(255,90,209,0)');
+      ctx.strokeStyle = 'rgba(255,90,209,0.55)'; ctx.lineWidth = aw * 1.6; ctx.beginPath();
+      for (let j = 0; j <= 10; j++) { const pp = axonPoint(g, q - 0.1 + j * 0.01); j ? ctx.lineTo(pp.x, pp.y) : ctx.moveTo(pp.x, pp.y); }
+      ctx.stroke();
+    } else {
+      const e = 1 - (f - 1) / 0.9;
+      if (e > 0) for (const b of g.bout) glowDot(ctx, b.x, b.y, g.R * (0.6 + 0.8 * e), `rgba(255,200,245,${0.8 * e})`, 'rgba(255,90,209,0)');
+      if (!p.released && mode === 'syn' && i < geos.length - 1 && geos[i + 1].inPt) {
+        p.released = true; spawnVesicles(g.bout[0], geos[i + 1].inPt, g.R);
+      }
+    }
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  drawSoma(ctx, g.cx, g.cy, g.R, c);
+}
+function drawLabel(ctx, text, x, y, lx, ly, align) {
+  ctx.strokeStyle = 'rgba(128,165,186,0.45)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(lx, ly); ctx.stroke();
+  ctx.fillStyle = 'rgba(223,246,255,0.8)'; ctx.beginPath(); ctx.arc(x, y, 1.8, 0, 6.283); ctx.fill();
+  ctx.fillStyle = 'rgba(160,200,222,0.85)';
+  if (vert) {
+    ctx.textAlign = ly < y ? 'left' : 'right'; ctx.textBaseline = 'middle';
+    txt(ctx, text, lx, ly, ly < y ? 4 : -4, 0);
+  } else {
+    ctx.textAlign = align; ctx.textBaseline = ly < y ? 'bottom' : 'top';
+    ctx.fillText(text, lx + (align === 'left' ? 2 : -2), ly + (ly < y ? -3 : 3));
+  }
+}
+
+/* ---- сеть ---- */
+const NODE_R = () => clamp(Math.min(cv.w, cv.h) * 0.045, 11, 20);
+const nodePos = i => ({ x: 30 + netNodes[i].x * (cv.w - 60), y: 30 + netNodes[i].y * (cv.h - 96) });
+function linkCurve(l) {
+  const a = nodePos(l.from), b = nodePos(l.to), dx = b.x - a.x, dy = b.y - a.y, L = Math.hypot(dx, dy) || 1;
+  const off = L * 0.16; // изгиб в одну сторону разводит встречные связи A→B и B→A
+  return { a, b, L, R: NODE_R(), cx: (a.x + b.x) / 2 - dy / L * off, cy: (a.y + b.y) / 2 + dx / L * off };
+}
+function curvePt(c, t) {
+  const u = 1 - t;
+  return { x: u * u * c.a.x + 2 * u * t * c.cx + t * t * c.b.x, y: u * u * c.a.y + 2 * u * t * c.cy + t * t * c.b.y };
+}
+const curveEnds = c => [Math.min(0.45, c.R * 1.15 / c.L), Math.max(0.55, 1 - (c.R * 1.15 + 3) / c.L)];
+function hitNode(x, y) {
+  const R = NODE_R();
+  for (let i = netNodes.length - 1; i >= 0; i--) { const p = nodePos(i); if (Math.hypot(p.x - x, p.y - y) < R * 1.6) return i; }
+  return -1;
+}
+function hitLink(x, y) {
+  for (let k = links.length - 1; k >= 0; k--) {
+    const c = linkCurve(links[k]), [ts, te] = curveEnds(c);
+    for (let j = 0; j <= 20; j++) { const p = curvePt(c, lerp(ts, te, j / 20)); if (Math.hypot(p.x - x, p.y - y) < 8) return k; }
+  }
+  return -1;
+}
+const TOOL_HINT = {
+  select: 'Нажми на нейрон, чтобы выбрать его и увидеть данные. Перетаскивай нейроны, чтобы двигать.',
+  add: 'Нажми на пустое место, чтобы поставить нейрон (до 12).',
+  link: 'Нажми на нейрон-источник, затем на цель. Повторное нажатие меняет тип связи или удаляет её.',
+  input: 'Нажми на нейрон, чтобы подключить его к стимулятору или отключить. Входы обведены пунктиром.',
+  kick: 'Нажми на нейрон, чтобы ударить его током 25 мкА/см² на 1 мс.',
+  del: 'Нажми на нейрон или связь, чтобы удалить.'
+};
+const pointer = { x: 0, y: 0 };
+function drawNet(ctx) {
+  const R = NODE_R();
+  ctx.lineCap = 'round';
+  for (const l of links) {
+    const c = linkCurve(l), [ts, te] = curveEnds(c);
+    const hl = selNode >= 0 && (l.from === selNode || l.to === selNode);
+    ctx.strokeStyle = l.inh ? `rgba(255,107,122,${hl ? 0.95 : 0.5})` : `rgba(109,255,180,${hl ? 0.9 : 0.45})`;
+    ctx.lineWidth = hl ? 2.2 : 1.5;
+    ctx.beginPath();
+    for (let j = 0; j <= 24; j++) { const p = curvePt(c, lerp(ts, te, j / 24)); j ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y); }
+    ctx.stroke();
+    const e = curvePt(c, te), e0 = curvePt(c, te - 0.03), ang = Math.atan2(e.y - e0.y, e.x - e0.x);
+    ctx.fillStyle = ctx.strokeStyle;
+    // обозначения как в нейроанатомии: кружок — возбуждение, поперечная черта — торможение
+    if (l.inh) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(ang); ctx.fillRect(-1.5, -R * 0.45, 3, R * 0.9); ctx.restore(); }
+    else { ctx.beginPath(); ctx.arc(e.x, e.y, 3.4, 0, 6.283); ctx.fill(); }
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of axPulses) {
+    if (!p.link || !links.includes(p.link)) continue;
+    const f = (simT - p.t0) / p.dl;
+    if (f < 0 || f > 1) continue;
+    const c = linkCurve(p.link), [ts, te] = curveEnds(c), pt = curvePt(c, lerp(ts, te, f));
+    glowDot(ctx, pt.x, pt.y, R * 0.85, p.link.inh ? 'rgba(255,170,180,0.95)' : 'rgba(255,225,248,0.95)', 'rgba(255,90,209,0)');
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  if (netTool === 'link' && linkFrom >= 0 && netNodes[linkFrom]) {
+    const a = nodePos(linkFrom);
+    ctx.setLineDash([5, 5]); ctx.strokeStyle = linkInh ? 'rgba(255,107,122,0.8)' : 'rgba(109,255,180,0.8)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(pointer.x, pointer.y); ctx.stroke();
+    if (activePz && activePz.maxLen) {
+      ctx.strokeStyle = 'rgba(255,181,71,0.55)';
+      ctx.beginPath(); ctx.ellipse(a.x, a.y, activePz.maxLen * (cv.w - 60), activePz.maxLen * (cv.h - 96), 0, 0, 6.283); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+  }
+  const tt = performance.now() / 1000;
+  ctx.font = '600 11px "JetBrains Mono", ui-monospace, monospace';
+  netNodes.forEach((n, i) => {
+    const c = cells[i]; if (!c) return;
+    const p = nodePos(i), col = vRGB(c.V), u = clamp((c.V + 72) / 100, 0, 1);
+    ctx.strokeStyle = rgba(col, 0.55 + 0.35 * u); ctx.lineWidth = Math.max(1, R * 0.14);
+    ctx.beginPath();
+    for (let k = 0; k < 7; k++) {
+      const a = k / 7 * 6.283 + i * 0.7, r2 = R * (1.5 + 0.25 * Math.sin(k * 2.3 + i));
+      ctx.moveTo(p.x + Math.cos(a) * R, p.y + Math.sin(a) * R); ctx.lineTo(p.x + Math.cos(a + 0.15) * r2, p.y + Math.sin(a + 0.15) * r2);
+    }
+    ctx.stroke();
+    if (c.sE > 0.02 || c.sI > 0.02) {
+      ctx.globalCompositeOperation = 'lighter';
+      if (c.sE > 0.02) glowDot(ctx, p.x, p.y, R * (1.6 + c.sE), `rgba(109,255,180,${0.35 * c.sE})`, 'rgba(0,0,0,0)');
+      if (c.sI > 0.02) glowDot(ctx, p.x, p.y, R * (1.6 + c.sI), `rgba(255,107,122,${0.35 * c.sI})`, 'rgba(0,0,0,0)');
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    drawSoma(ctx, p.x, p.y, R, c);
+    if (n.input) {
+      ctx.setLineDash([3, 4]); ctx.lineDashOffset = -tt * 10;
+      ctx.strokeStyle = 'rgba(63,224,255,0.85)'; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.arc(p.x, p.y, R * 2.05, 0, 6.283); ctx.stroke(); ctx.setLineDash([]);
+    }
+    if (i === selNode || i === linkFrom) {
+      ctx.strokeStyle = i === linkFrom ? 'rgba(255,181,71,0.9)' : 'rgba(223,246,255,0.9)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, R * 2.35 + Math.sin(tt * 4) * 1.5, 0, 6.283); ctx.stroke();
+    }
+    ctx.fillStyle = n.role ? (n.role === 'O' ? '#ff5ad1' : n.role === 'I' ? '#ff6b7a' : '#3fe0ff') : nodeColor(i);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    ctx.font = n.role ? '700 13px "Unbounded", system-ui, sans-serif' : '600 11px "JetBrains Mono", ui-monospace, monospace';
+    ctx.fillText(n.role || 'N' + (i + 1), p.x, p.y + R * 2.2 + 2);
+    if (n.fixed) {
+      ctx.setLineDash([4, 4]); ctx.strokeStyle = 'rgba(223,246,255,0.35)'; ctx.lineWidth = 1;
+      ctx.strokeRect(p.x - R * 1.9, p.y - R * 1.9, R * 3.8, R * 3.8); ctx.setLineDash([]);
+    }
+    spawnIons({ cx: p.x, cy: p.y, R }, c);
+  });
+  if (!netNodes.length) {
+    ctx.fillStyle = 'rgba(160,200,222,0.8)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = '500 13px "Onest", system-ui, sans-serif';
+    ctx.fillText('Сеть пуста. Выбери «+ Нейрон» и нажми сюда.', cv.w / 2, cv.h / 2);
+  }
+}
+
+function drawCell(dt) {
+  const { ctx, w, h } = cv, d = DPR();
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  const bg = ctx.createLinearGradient(0, 0, 0, h);
+  bg.addColorStop(0, '#05101c'); bg.addColorStop(1, '#03080f');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = 'rgba(120,180,220,0.07)';
+  for (let x = 14; x < w; x += 28) for (let y = 14; y < h; y += 28) ctx.fillRect(x, y, 1.2, 1.2);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of plankton) {
+    p.y -= p.v * dt * 0.6; p.r += dt * 0.5; if (p.y < -0.02) { p.y = 1.02; p.x = Math.random(); }
+    ctx.fillStyle = `rgba(120,210,255,${0.12 + 0.1 * Math.sin(p.r)})`;
+    ctx.beginPath(); ctx.arc(p.x * w + Math.sin(p.r) * 6, p.y * h, p.s, 0, 6.283); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  if (mode === 'net') drawNet(ctx);
+  else {
+    applyView(ctx);
+    geos.forEach((g, i) => { if (cells[i]) { drawNeuron(ctx, g, cells[i], i); spawnIons(g, cells[i]); } });
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  for (let j = parts.length - 1; j >= 0; j--) {
+    const p = parts[j];
+    p.t += dt / p.life;
+    if (p.t >= 1) { parts.splice(j, 1); continue; }
+    if (p.t < 0) continue;
+    const e = 1 - Math.pow(1 - p.t, 2);
+    let x, y;
+    if (p.ty === 0) { const r = lerp(p.r0, p.r1, e); x = p.cx + Math.cos(p.a) * r; y = p.cy + Math.sin(p.a) * r; }
+    else { x = lerp(p.x0, p.x1, e); y = lerp(p.y0, p.y1, e) + Math.sin(p.t * 9) * 1.5; }
+    const al = Math.sin(Math.PI * p.t);
+    ctx.fillStyle = `rgba(${p.col},${0.25 * al})`; ctx.beginPath(); ctx.arc(x, y, p.sz * 3.2 + 1.5, 0, 6.283); ctx.fill();
+    ctx.fillStyle = `rgba(${p.col},${0.95 * al})`; ctx.beginPath(); ctx.arc(x, y, p.sz + 0.8, 0, 6.283); ctx.fill();
+  }
+  ctx.globalCompositeOperation = 'source-over';
+  if (mode === 'net') return;
+  // метка выбранной части
+  if (cardState && cardState.pt) {
+    const pt = cardState.pt, rr = 9 + Math.sin(performance.now() / 180) * 2;
+    ctx.strokeStyle = 'rgba(63,224,255,0.9)'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(pt.x, pt.y, rr, 0, 6.283); ctx.stroke();
+  }
+  ctx.font = '500 10.5px "JetBrains Mono", ui-monospace, monospace';
+  const lw = vert ? cv.h : cv.w;
+  if (mode === 'single' && lw >= 480 && geos[0]) {
+    const g = geos[0];
+    let tip = g.segs[0]; for (const s of g.segs) if (s.x2 < tip.x2) tip = s;
+    drawLabel(ctx, 'дендриты', tip.x2, tip.y2, tip.x2 + 6, tip.y2 - 30, 'left');
+    drawLabel(ctx, 'сома', g.cx + g.R * 0.7, g.cy - g.R * 0.7, g.cx + g.R * 1.6, g.cy - g.R * 2.6, 'left');
+    const hl = axonPoint(g, 0.01);
+    drawLabel(ctx, 'аксонный холмик', hl.x, hl.y + g.R * 0.15, hl.x + 8, g.cy + g.R * 2.3, 'left');
+    if (g.K) {
+      const my = axonPoint(g, 2.5 / g.K), nd = axonPoint(g, 4 / g.K);
+      drawLabel(ctx, 'миелин', my.x, my.y - g.R * 0.3, my.x + 6, my.y - g.R * 2, 'left');
+      drawLabel(ctx, 'перехват Ранвье', nd.x, nd.y + g.R * 0.1, nd.x + 6, nd.y + g.R * 2, 'left');
+    }
+    const end = g.ax[g.ax.length - 1];
+    drawLabel(ctx, 'терминали', end.x, end.y - g.R * 0.1, end.x - 10, end.y - g.R * 2.6, 'right');
+  }
+  if (mode === 'syn') {
+    geos.forEach((g, i) => {
+      const c = cells[i]; if (!c) return;
+      ctx.textAlign = vert ? 'right' : 'center'; ctx.textBaseline = vert ? 'middle' : 'top';
+      const ay = g.cy + g.R * 1.6 + 4;
+      ctx.fillStyle = CELLC[i]; ctx.font = '600 12px "JetBrains Mono", ui-monospace, monospace';
+      txt(ctx, 'N' + (i + 1), g.cx, ay);
+      ctx.fillStyle = 'rgba(160,200,222,0.85)'; ctx.font = '500 10.5px "JetBrains Mono", ui-monospace, monospace';
+      txt(ctx, fmt(c.V, 1) + ' мВ', g.cx, ay, 0, 16);
+      if (i > 0 && g.inPt) {
+        const b = geos[i - 1].bout[0], exc = synType[i - 1] === 'exc';
+        ctx.fillStyle = exc ? '#6dffb4' : '#ff6b7a';
+        ctx.textAlign = vert ? 'left' : 'center'; ctx.textBaseline = vert ? 'middle' : 'bottom';
+        txt(ctx, exc ? 'возб.' : 'торм.', (b.x + g.inPt.x) / 2, Math.min(b.y, g.inPt.y) - g.R * 1.4);
+      }
+    });
+  }
+}
+
+/* ================= Карточки частей клетки ================= */
+const PARTS = {
+  soma: { k: 'сома', t: 'Интегратор входов', p: 'Сюда стекаются токи от дендритов. Когда мембрана доходит примерно до −55 мВ, Na⁺-каналы открываются лавиной и рождается спайк.' },
+  dend: { k: 'дендриты', t: 'Антенны нейрона', p: 'На дендритах сидят синапсы от других клеток. Их ток течёт к соме и по пути затухает, поэтому дальние синапсы слабее ближних.' },
+  hill: { k: 'аксонный холмик', t: 'Курок спайка', p: 'Здесь самая высокая плотность Na⁺-каналов. Потенциал действия обычно запускается именно тут и уходит в аксон.' },
+  myelin: { k: 'миелин', t: 'Изоляция аксона', p: 'Слои мембраны шванновских клеток. Ток не утекает наружу, и сигнал бежит до 120 м/с вместо 1–2 м/с у голого аксона.' },
+  node: { k: 'перехват Ранвье', t: 'Точка перезарядки', p: 'Участок без миелина, плотно набитый Na⁺-каналами. Спайк перепрыгивает от перехвата к перехвату: это сальтаторное проведение.' },
+  axon: { k: 'аксон', t: 'Кабель выхода', p: 'Передаёт спайк следующей клетке. В этой модели путь до терминали занимает 2,2 мс.' },
+  term: { k: 'синаптические терминали', t: 'Выброс медиатора', p: 'Когда спайк приходит сюда, открываются Ca²⁺-каналы, и пузырьки с медиатором (глутаматом или ГАМК) выливаются в синаптическую щель.' },
+  net: { k: 'нейрон сети', t: '', p: 'Инструмент «Связь» соединяет его с другими клетками, «Пнуть» бьёт током, «Вход» подключает к стимулятору.' }
+};
+const card = $('#card'), cardK = $('#cardK'), cardT = $('#cardT'), cardP = $('#cardP'), cardL = $('#cardL');
+let cardState = null;
+function partAt(x, y) {
+  for (let i = geos.length - 1; i >= 0; i--) {
+    const g = geos[i], R = g.R;
+    if (Math.hypot(x - g.cx, y - g.cy) < R * 1.3) return { kind: 'soma', i, pt: { x: g.cx, y: g.cy } };
+    for (const tm of g.term) if (distSeg(x, y, tm.x1, tm.y1, tm.x2, tm.y2) < Math.max(9, R * 0.5)) return { kind: 'term', i, pt: { x: tm.x2, y: tm.y2 } };
+    let bi = 0, bd = 1e9;
+    g.ax.forEach((q, j) => { const dd = Math.hypot(x - q.x, y - q.y); if (dd < bd) { bd = dd; bi = j; } });
+    if (bd < Math.max(10, R * 0.45)) {
+      const t = bi / (g.ax.length - 1), pt = g.ax[bi];
+      if (t < 0.06) return { kind: 'hill', i, pt };
+      if (g.K) { const loc = t * g.K - Math.floor(t * g.K); return { kind: loc > 0.14 && loc < 0.86 ? 'myelin' : 'node', i, pt }; }
+      return { kind: 'axon', i, pt };
+    }
+    for (const s of g.segs) for (let j = 0; j <= 6; j++) {
+      const p = bez(s, j / 6);
+      if (Math.hypot(x - p.x, y - p.y) < Math.max(9, s.w + 5)) return { kind: 'dend', i, pt: p };
+    }
+  }
+  return null;
+}
+function cardLive() {
+  const s = cardState; if (!s) return '';
+  const c = cells[s.i]; if (!c) return '';
+  switch (s.kind) {
+    case 'soma': return `V = ${fmt(c.V, 1)} мВ\nNa⁺ открыто ${fmt(c.m * c.m * c.m * c.h * 100, 1)}% · K⁺ открыто ${fmt(Math.pow(c.n, 4) * 100, 1)}%`;
+    case 'dend': return `входящих синапсов: ${links.filter(l => l.to === s.i).length}\nвозб. проводимость ${Math.round(c.sE * 100)}% · торм. ${Math.round(c.sI * 100)}%`;
+    case 'hill': return `спайков: ${c.count}\nспайк засчитывается при переходе через 0 мВ`;
+    case 'myelin': case 'node': case 'axon': return `импульсов в пути: ${axPulses.filter(p => p.cell === s.i && simT - p.t0 < AXON_T).length}`;
+    case 'term': return `выбросов медиатора: ${c.count}`;
+    case 'net': {
+      const n = netNodes[s.i];
+      return `V = ${fmt(c.V, 1)} мВ · спайков ${c.count}\nвходов ${links.filter(l => l.to === s.i).length} · выходов ${links.filter(l => l.from === s.i).length}\n${n && n.input ? 'подключён к стимулятору' : 'не подключён к стимулятору'}`;
+    }
+  }
+  return '';
+}
+function showCard(kind, i, sx, sy, pt) {
+  const info = PARTS[kind];
+  cardK.textContent = info.k + (mode === 'syn' ? ` · N${i + 1}` : '');
+  cardT.textContent = kind === 'net' ? `Нейрон N${i + 1}` : info.t;
+  cardP.textContent = info.p;
+  cardState = { kind, i, pt };
+  cardL.textContent = cardLive();
+  card.hidden = false;
+  const W = cellWrap.clientWidth, H = cellWrap.clientHeight, cw = card.offsetWidth, ch = card.offsetHeight;
+  let left = sx + 18; if (left + cw > W - 8) left = sx - 18 - cw;
+  card.style.left = clamp(left, 8, Math.max(8, W - cw - 8)) + 'px';
+  card.style.top = clamp(sy - ch / 2, 8, Math.max(8, H - ch - 8)) + 'px';
+}
+function hideCard() { card.hidden = true; cardState = null; if (mode === 'net') selNode = -1; }
+$('#cardX').addEventListener('click', hideCard);
+
+/* ================= Редактор сети ================= */
+function addNode(x, y) {
+  if (netNodes.length >= MAX_NODES) { log(`В сети не больше ${MAX_NODES} нейронов`, 'sys'); return; }
+  netNodes.push({ x: clamp((x - 30) / (cv.w - 60), 0, 1), y: clamp((y - 30) / (cv.h - 96), 0, 1), input: false });
+  cells.push(makeCell());
+  userNodes++; checkBuild(); renderNetCount();
+  log(`Добавлен нейрон N${netNodes.length}`, 'sys');
+}
+function toggleLink(a, b) {
+  const ex = links.find(l => l.from === a && l.to === b);
+  if (!ex && activePz && activePz.maxLen) {
+    const p = netNodes[a], q = netNodes[b];
+    if (Math.hypot(p.x - q.x, p.y - q.y) > activePz.maxLen) { log('Связь длиннее допустимой: поставь промежуточный нейрон', 'sys'); blip(110, 0, 0.5); return; }
+  }
+  if (ex && ex.inh === linkInh) { links.splice(links.indexOf(ex), 1); log(`Связь N${a + 1} → N${b + 1} удалена`, 'sys'); }
+  else if (ex) { ex.inh = linkInh; log(`Связь N${a + 1} → N${b + 1} теперь ${linkInh ? 'тормозная' : 'возбуждающая'}`, 'sys'); }
+  else { links.push({ from: a, to: b, inh: linkInh }); userLinks++; checkBuild(); log(`Связь N${a + 1} → N${b + 1} (${linkInh ? 'торм.' : 'возб.'})`, 'sys'); }
+}
+function removeNode(i) {
+  if (netNodes[i].fixed) { log('Этот нейрон — часть задания, его нельзя удалить', 'sys'); return; }
+  netNodes.splice(i, 1); cells.splice(i, 1);
+  links = links.filter(l => l.from !== i && l.to !== i).map(l => ({ ...l, from: l.from > i ? l.from - 1 : l.from, to: l.to > i ? l.to - 1 : l.to }));
+  releases = []; kicks = []; axPulses = []; parts.length = 0;
+  hideCard(); linkFrom = -1;
+  focus = clamp(focus > i ? focus - 1 : focus, 0, Math.max(0, cells.length - 1));
+  renderNetCount();
+  log(`Нейрон удалён, осталось ${netNodes.length}`, 'sys');
+}
+function selectNode(i) {
+  selNode = i; focus = i; $('#iNote').textContent = 'N' + (i + 1);
+  const p = nodePos(i); showCard('net', i, p.x, p.y, null);
+}
+function renderNetCount() { $('#netCount').textContent = `${netNodes.length}/${MAX_NODES}`; }
+const PRESETS = {
+  ring() { for (let i = 0; i < 5; i++) { const a = -Math.PI / 2 + i / 5 * 2 * Math.PI; netNodes.push({ x: 0.5 + 0.3 * Math.cos(a), y: 0.5 + 0.42 * Math.sin(a), input: i === 0 }); links.push({ from: i, to: (i + 1) % 5, inh: false }); } },
+  chain() { for (let i = 0; i < 6; i++) { netNodes.push({ x: 0.04 + i * 0.184, y: i % 2 ? 0.3 : 0.7, input: i === 0 }); if (i) links.push({ from: i - 1, to: i, inh: false }); } },
+  ffi() {
+    netNodes.push({ x: 0.1, y: 0.6, input: true }, { x: 0.5, y: 0.12, input: false }, { x: 0.9, y: 0.6, input: false });
+    links.push({ from: 0, to: 1, inh: false }, { from: 0, to: 2, inh: false }, { from: 1, to: 2, inh: true });
+  },
+  random() {
+    const n = 8;
+    for (let i = 0, tries = 0; i < n && tries < 500; tries++) {
+      const p = { x: Math.random(), y: Math.random(), input: i === 0 };
+      if (netNodes.every(q => Math.hypot(q.x - p.x, q.y - p.y) > 0.22)) { netNodes.push(p); i++; }
+    }
+    for (let a = 0; a < netNodes.length; a++) for (let b = 0; b < netNodes.length; b++) if (a !== b && Math.random() < 0.22) links.push({ from: a, to: b, inh: Math.random() < 0.2 });
+  },
+  clear() { netNodes.push({ x: 0.5, y: 0.5, input: true }); },
+  // эпилептический очаг: 6 возбуждающих клеток с рекуррентными связями и тормозной интернейрон I в центре
+  seizure() {
+    for (let i = 0; i < 6; i++) { const a = -Math.PI / 2 + i / 6 * 2 * Math.PI; netNodes.push({ x: 0.5 + 0.34 * Math.cos(a), y: 0.5 + 0.44 * Math.sin(a), input: i === 0 }); }
+    netNodes.push({ x: 0.5, y: 0.5, input: false, role: 'I' });
+    for (let i = 0; i < 6; i++) links.push({ from: i, to: (i + 1) % 6, inh: false, dl: 2.5 }, { from: i, to: (i + 2) % 6, inh: false, dl: 3 }, { from: i, to: 6, inh: false, dl: 1 }, { from: 6, to: i, inh: true, dl: 0.8 });
+  }
+};
+const PRESET_NAME = { ring: 'кольцо из 5 нейронов', chain: 'цепочка из 6 нейронов', ffi: 'прямое торможение', random: 'случайная сеть', clear: 'один входной нейрон', seizure: 'эпилептический очаг' };
+function loadPreset(name) {
+  netNodes = []; links = [];
+  PRESETS[name]();
+  cells = netNodes.map(makeCell);
+  releases = []; kicks = []; axPulses = []; parts.length = 0;
+  focus = 0; linkFrom = -1; hideCard(); renderNetCount();
+  log('Загружена сеть: ' + PRESET_NAME[name], 'sys');
+}
+$('#presets').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (activeCase) exitCase();
+  if (activePz) exitPuzzle();
+  loadPreset(b.dataset.p);
+});
+function setTool(t) {
+  netTool = t; linkFrom = -1;
+  $('#tools').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tool === t)));
+  $('#toolHint').textContent = TOOL_HINT[t];
+}
+$('#tools').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setTool(b.dataset.tool); });
+$('#linkType').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  linkInh = b.dataset.t === 'inh'; setSeg($('#linkType'), 't', b.dataset.t);
+});
+
+/* ---- указатель на холсте клетки ---- */
+let drag = null;
+const evPos = e => { const r = cv.el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+cv.el.addEventListener('pointerdown', e => {
+  const { x, y } = evPos(e);
+  pointer.x = x; pointer.y = y;
+  if (mode !== 'net') {
+    const l = toLayout(x, y), hit = partAt(l.x, l.y);
+    if (!hit) { hideCard(); return; }
+    if (mode === 'syn') { focus = hit.i; setSeg($('#focusSeg'), 'f', focus); $('#iNote').textContent = 'N' + (focus + 1); }
+    const s = toScreen(hit.pt.x, hit.pt.y);
+    showCard(hit.kind, hit.i, s.x, s.y, hit.pt);
+    return;
+  }
+  const ni = hitNode(x, y);
+  const startDrag = () => { drag = { i: ni, sx: x, sy: y, moved: false }; try { cv.el.setPointerCapture(e.pointerId); } catch (err) {} };
+  switch (netTool) {
+    case 'select': if (ni >= 0) { selectNode(ni); startDrag(); } else hideCard(); break;
+    case 'add': if (ni >= 0) startDrag(); else addNode(x, y); break;
+    case 'link':
+      if (ni < 0) linkFrom = -1;
+      else if (linkFrom < 0) linkFrom = ni;
+      else { if (ni !== linkFrom) toggleLink(linkFrom, ni); linkFrom = -1; }
+      break;
+    case 'input':
+      if (ni >= 0) { netNodes[ni].input = !netNodes[ni].input; log(`N${ni + 1} ${netNodes[ni].input ? 'подключён к стимулятору' : 'отключён от стимулятора'}`, 'sys'); }
+      break;
+    case 'kick':
+      if (ni >= 0) { kicks.push({ cell: ni, t0: simT, t1: simT + 1, amp: 25 }); blip(120, 0, 0.5); }
+      break;
+    case 'del': {
+      if (ni >= 0) { removeNode(ni); break; }
+      const li = hitLink(x, y);
+      if (li >= 0) { const l = links[li]; links.splice(li, 1); log(`Связь N${l.from + 1} → N${l.to + 1} удалена`, 'sys'); }
+      break;
+    }
+  }
+});
+cv.el.addEventListener('pointermove', e => {
+  const { x, y } = evPos(e);
+  pointer.x = x; pointer.y = y;
+  if (mode !== 'net') { const l = toLayout(x, y); cv.el.style.cursor = partAt(l.x, l.y) ? 'pointer' : 'default'; return; }
+  if (drag && netNodes[drag.i] && !netNodes[drag.i].fixed) {
+    if (!drag.moved && Math.hypot(x - drag.sx, y - drag.sy) > 4) { drag.moved = true; hideCard(); }
+    if (drag.moved) {
+      netNodes[drag.i].x = clamp((x - 30) / (cv.w - 60), 0, 1);
+      netNodes[drag.i].y = clamp((y - 30) / (cv.h - 96), 0, 1);
+    }
+  }
+  cv.el.style.cursor = drag && drag.moved ? 'grabbing' : (hitNode(x, y) >= 0 || netTool === 'add' ? 'pointer' : 'default');
+});
+const endDrag = () => { if (drag && drag.moved && netTool === 'select') selectNode(drag.i); drag = null; };
+cv.el.addEventListener('pointerup', endDrag);
+cv.el.addEventListener('pointercancel', () => { drag = null; });
+
+/* ================= Осциллограф ================= */
+function plotFrame(o, L, Rp, T, B) {
+  const { ctx, w, h } = o, d = DPR();
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#030a12'; ctx.fillRect(0, 0, w, h);
+  return { ctx, w, h, pw: w - L - Rp, ph: h - T - B };
+}
+function timeGrid(ctx, L, T, pw, ph) {
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(128,165,186,0.75)';
+  for (let k = 0; k <= WIN; k += 10) {
+    const x = Math.round(L + pw * (1 - k / WIN)) + 0.5;
+    ctx.strokeStyle = 'rgba(120,180,220,0.07)'; ctx.beginPath(); ctx.moveTo(x, T); ctx.lineTo(x, T + ph); ctx.stroke();
+    ctx.fillText(k ? fmt(-k, 0) : '0 мс', x - (k ? 0 : 10), T + ph + 4);
+  }
+}
+function trace(ctx, arr, Y, L, pw, col, strong) {
+  ctx.beginPath();
+  for (let j = 0; j < WS; j++) {
+    const idx = (hi - WS + j + HN) % HN, x = L + pw * j / (WS - 1), y = Y(arr[idx]);
+    j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  }
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = col; ctx.globalAlpha = strong ? 0.22 : 0.1; ctx.lineWidth = 5; ctx.stroke();
+  ctx.globalAlpha = strong ? 1 : 0.45; ctx.lineWidth = 1.6; ctx.stroke();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+const focusIdx = () => mode === 'single' ? 0 : clamp(focus, 0, Math.max(0, cells.length - 1));
+function drawScopeV() {
+  const L = 42, Rp = 12, T = 12, B = 20;
+  const { ctx, w, pw, ph } = plotFrame(sv, L, Rp, T, B);
+  const vmin = -90, vmax = 50, Y = v => T + (vmax - v) / (vmax - vmin) * ph;
+  ctx.font = '10px "JetBrains Mono", ui-monospace, monospace';
+  ctx.textBaseline = 'middle';
+  for (let v = -80; v <= 40; v += 20) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = v === 0 ? 'rgba(255,90,209,0.3)' : 'rgba(120,180,220,0.1)';
+    ctx.setLineDash(v === 0 ? [4, 4] : []);
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rp, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(128,165,186,0.8)'; ctx.textAlign = 'right'; ctx.fillText(fmt(v, 0), L - 6, y);
+  }
+  ctx.setLineDash([]);
+  timeGrid(ctx, L, T, pw, ph);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.fillStyle = 'rgba(128,165,186,0.8)'; ctx.fillText('мВ', 6, 2);
+  if (!cells.length) return;
+  const fc = focusIdx();
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 2, pw, ph + 4); ctx.clip();
+  if (mode === 'single') {
+    ctx.beginPath();
+    const base = T + ph;
+    for (let j = 0; j < WS; j++) {
+      const idx = (hi - WS + j + HN) % HN, x = L + pw * j / (WS - 1);
+      const y = base - clamp(stimH[idx] / 50, 0, 1) * ph * 0.16;
+      j ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.strokeStyle = 'rgba(255,181,71,0.6)'; ctx.lineWidth = 1.2; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,181,71,0.7)'; ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
+    ctx.fillText('I стим', L + 4, base - ph * 0.16 - 2);
+  } else {
+    for (let i = 0; i < cells.length; i++) if (i !== fc) trace(ctx, cells[i].H.V, Y, L, pw, nodeColor(i), false);
+  }
+  trace(ctx, cells[fc].H.V, Y, L, pw, nodeColor(fc), true);
+  ctx.restore();
+  const y = Y(clamp(cells[fc].V, vmin, vmax));
+  ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = nodeColor(fc);
+  ctx.beginPath(); ctx.arc(L + pw, y, 3, 0, 6.283); ctx.fill();
+  ctx.globalAlpha = 0.25; ctx.beginPath(); ctx.arc(L + pw, y, 8, 0, 6.283); ctx.fill();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
+const NICE = [20, 50, 100, 200, 500, 1000, 2000];
+let iScale = 1000;
+function drawScopeI() {
+  const L = 42, Rp = 12, T = 12, B = 20;
+  const { ctx, w, pw, ph } = plotFrame(si, L, Rp, T, B);
+  ctx.font = '10px "JetBrains Mono", ui-monospace, monospace';
+  if (!cells.length) return;
+  if (iTab === 'raster') {
+    const n = cells.length, rh = ph / n;
+    timeGrid(ctx, L, T, pw, ph);
+    ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    for (let i = 0; i < n; i++) {
+      const yc = T + rh * (i + 0.5);
+      ctx.strokeStyle = 'rgba(120,180,220,0.08)'; ctx.beginPath(); ctx.moveTo(L, yc); ctx.lineTo(w - Rp, yc); ctx.stroke();
+      ctx.fillStyle = nodeColor(i); if (rh >= 9) ctx.fillText('N' + (i + 1), L - 6, yc);
+      ctx.globalCompositeOperation = 'lighter';
+      for (const t of cells[i].spikes) {
+        const age = simT - t; if (age > WIN) continue;
+        const x = L + pw * (1 - age / WIN);
+        ctx.fillStyle = nodeColor(i); ctx.globalAlpha = 0.25; ctx.fillRect(x - 3, yc - rh * 0.4, 6, rh * 0.8);
+        ctx.globalAlpha = 1; ctx.fillRect(x - 1, yc - rh * 0.32, 2, rh * 0.64);
+      }
+      ctx.globalCompositeOperation = 'source-over';
+    }
+    return;
+  }
+  const c = cells[focusIdx()];
+  let series, lo, top, ticks, unit;
+  if (iTab === 'curr') {
+    let mx = 0;
+    for (let j = 0; j < WS; j++) { const idx = (hi - WS + j + HN) % HN; mx = Math.max(mx, Math.abs(c.H.INa[idx]), Math.abs(c.H.IK[idx])); }
+    const target = NICE.find(v => v >= mx * 1.05) || 2000;
+    iScale = target > iScale ? target : lerp(iScale, target, 0.05);
+    lo = -iScale; top = iScale; ticks = [-iScale, 0, iScale]; unit = 'мкА/см²';
+    series = [[c.H.INa, '#3fe0ff', 'I Na'], [c.H.IK, '#ffb547', 'I K']];
+  } else {
+    lo = 0; top = 1; ticks = [0, 0.5, 1]; unit = '';
+    series = [[c.H.m, '#3fe0ff', 'm'], [c.H.h, '#a58bff', 'h'], [c.H.n, '#ffb547', 'n']];
+  }
+  const Y = v => T + (top - v) / (top - lo) * ph;
+  ctx.textBaseline = 'middle';
+  for (const v of ticks) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = v === 0 && iTab === 'curr' ? 'rgba(223,246,255,0.18)' : 'rgba(120,180,220,0.1)';
+    ctx.beginPath(); ctx.moveTo(L, y); ctx.lineTo(w - Rp, y); ctx.stroke();
+    ctx.fillStyle = 'rgba(128,165,186,0.8)'; ctx.textAlign = 'right';
+    ctx.fillText(iTab === 'curr' ? fmt(Math.round(v), 0) : fmt(v, 1), L - 6, y);
+  }
+  timeGrid(ctx, L, T, pw, ph);
+  ctx.save(); ctx.beginPath(); ctx.rect(L, T - 2, pw, ph + 4); ctx.clip();
+  for (const [arr, col] of series) trace(ctx, arr, Y, L, pw, col, true);
+  ctx.restore();
+  ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  let lx = L + 8;
+  for (const [, col, name] of series) {
+    ctx.fillStyle = col; ctx.fillRect(lx, T + 5, 12, 2);
+    ctx.fillStyle = 'rgba(223,246,255,0.85)'; ctx.fillText(name, lx + 16, T + 1);
+    lx += 16 + ctx.measureText(name).width + 14;
+  }
+  if (unit) { ctx.fillStyle = 'rgba(128,165,186,0.8)'; ctx.fillText(unit, lx + 4, T + 1); }
+  if (iTab === 'curr') { ctx.fillStyle = 'rgba(128,165,186,0.6)'; ctx.textAlign = 'right'; ctx.fillText('вниз = вход в клетку', w - Rp - 4, T + ph - 13); }
+}
+
+/* ================= Интерфейс ================= */
+const ui = {
+  amp: $('#amp'), dur: $('#dur'), freq: $('#freq'), temp: $('#temp'), speed: $('#speed'), gsyn: $('#gsyn'),
+  ampO: $('#ampO'), durO: $('#durO'), freqO: $('#freqO'), tempO: $('#tempO'), speedO: $('#speedO'), gsynO: $('#gsynO'),
+  fire: $('#fire'), fireTxt: $('#fireTxt'), fireSub: $('#fireSub')
+};
+const ampFromSlider = x => Math.round(200 * Math.pow(x / 1000, 2) * 10) / 10;
+function setP(el) { const p = (el.value - el.min) / (el.max - el.min) * 100; el.style.setProperty('--p', p + '%'); }
+function setSeg(container, attr, val) {
+  container.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset[attr] === String(val))));
+}
+function syncInputs() {
+  stim.amp = ampFromSlider(+ui.amp.value);
+  ui.ampO.textContent = fmt(stim.amp, 1) + ' мкА/см²';
+  stim.dur = +ui.dur.value; ui.durO.textContent = fmt(stim.dur, 1) + ' мс';
+  stim.freq = +ui.freq.value; ui.freqO.textContent = stim.freq + ' Гц';
+  env.T = +ui.temp.value; ui.tempO.textContent = fmt(env.T, 1) + ' °C';
+  stim.speed = +ui.speed.value; ui.speedO.textContent = stim.speed + ' мс/с';
+  gsyn = +ui.gsyn.value; ui.gsynO.textContent = fmt(gsyn, 2) + ' мС/см²';
+  updateEnv();
+  $('#phiNote').textContent = `Q₁₀ = 3: каналы работают в ${fmt(env.phi, 2)} раза быстрее, чем при 6,3 °C в опытах на аксоне кальмара.`;
+  [ui.amp, ui.dur, ui.freq, ui.temp, ui.speed, ui.gsyn].forEach(setP);
+}
+[ui.amp, ui.dur, ui.freq, ui.temp, ui.speed, ui.gsyn].forEach(el => el.addEventListener('input', syncInputs));
+ui.temp.addEventListener('change', () => log(`Температура ${fmt(env.T, 1)} °C, φ = ${fmt(env.phi, 2)}`, 'sys'));
+
+function renderStim() {
+  setSeg($('#stimSeg'), 'm', stim.mode);
+  $('#durF').hidden = stim.mode === 'dc';
+  $('#freqF').hidden = stim.mode !== 'train';
+  ui.fire.classList.toggle('armed', stim.mode !== 'pulse' && !stim.on);
+  if (stim.mode === 'pulse') { ui.fireTxt.textContent = 'Импульс'; ui.fireSub.textContent = 'пробел'; }
+  else if (stim.mode === 'train') { ui.fireTxt.textContent = stim.on ? 'Остановить серию' : 'Запустить серию'; ui.fireSub.textContent = stim.on ? 'серия идёт' : 'пробел'; }
+  else { ui.fireTxt.textContent = stim.on ? 'Выключить ток' : 'Включить ток'; ui.fireSub.textContent = stim.on ? 'ток подаётся' : 'пробел'; }
+}
+$('#stimSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  stim.mode = b.dataset.m;
+  stim.on = stim.mode === 'train';
+  stim.nextTrain = simT + 2;
+  renderStim();
+  log({ pulse: 'Режим: одиночные импульсы', train: `Режим: серия ${stim.freq} Гц`, dc: 'Режим: постоянный ток (выключен)' }[stim.mode], 'sys');
+});
+function fire() {
+  if (!entered) return;
+  if (stim.mode === 'pulse') {
+    addPulse(simT, true);
+    ui.fire.classList.remove('hit'); void ui.fire.offsetWidth; ui.fire.classList.add('hit');
+  } else {
+    stim.on = !stim.on;
+    if (stim.on) { stim.nextTrain = simT + 1; stim.dcStart = simT; }
+    log(stim.mode === 'train' ? (stim.on ? `Серия ${stim.freq} Гц запущена` : 'Серия остановлена') : (stim.on ? `Постоянный ток ${fmt(stim.amp, 1)} мкА/см²` : 'Ток выключен'), 'sys');
+  }
+  renderStim();
+}
+ui.fire.addEventListener('click', fire);
+ui.amp.addEventListener('change', () => { if (stim.mode === 'dc' && stim.on) stim.dcStart = simT; });
+
+$('#pauseBtn').addEventListener('click', e => {
+  running = !running;
+  e.currentTarget.textContent = running ? 'Пауза' : 'Продолжить';
+  log(running ? 'Время пошло' : 'Пауза', 'sys');
+});
+function resetCells() {
+  const n = mode === 'single' ? 1 : mode === 'syn' ? 3 : netNodes.length;
+  cells = Array.from({ length: n }, makeCell);
+  pulses = []; releases = []; axPulses = []; kicks = []; parts.length = 0; stimH.fill(0);
+  stim.nextTrain = simT + 2; stim.dcStart = simT;
+}
+$('#resetBtn').addEventListener('click', () => { resetCells(); log('Клетки возвращены в покой (−65 мВ)', 'sys'); });
+
+const DESC = {
+  single: 'Голубые частицы — ионы Na⁺, входящие через открытые каналы. Янтарные — K⁺, выходящие наружу. Нажми на любую часть клетки, чтобы узнать, что она делает.',
+  syn: 'Спайк N1 бежит по аксону, в терминали выбрасываются пузырьки медиатора, и следующая клетка получает синаптический ток. Зелёная вспышка — возбуждение, красная — торможение.',
+  net: 'Конструктор сети. Связь с кружком на конце возбуждает, с поперечной чертой тормозит. Пунктирное кольцо отмечает нейроны, подключённые к стимулятору.'
+};
+function setMode(m) {
+  mode = m; focus = 0; selNode = -1; linkFrom = -1; drag = null;
+  setSeg($('#modeSeg'), 'm', m);
+  $('#synCtl').hidden = m === 'single';
+  $('#chainCtl').hidden = m !== 'syn';
+  $('#netCtl').hidden = m !== 'net';
+  $('#focusSeg').hidden = m !== 'syn';
+  $('#rasterBtn').hidden = m !== 'net';
+  cellWrap.classList.toggle('net', m === 'net');
+  setSeg($('#focusSeg'), 'f', 0);
+  $('#stageMode').textContent = { single: 'одиночный нейрон', syn: 'цепочка N1 → N2 → N3', net: 'конструктор сети' }[m];
+  $('#stageDesc').textContent = DESC[m];
+  $('#stimTarget').textContent = m === 'net' ? '→ входы' : '→ N1';
+  $('#synNote').textContent = m === 'net'
+    ? 'Возбуждающий синапс тянет мембрану к 0 мВ, тормозной к −80 мВ. Задержка растёт с длиной связи.'
+    : 'Возбуждающий синапс тянет мембрану к 0 мВ, тормозной к −80 мВ. Задержка складывается из проведения по аксону и 0,6 мс на выброс медиатора.';
+  if (m === 'net' && iTab !== 'raster') iTab = 'raster';
+  if (m !== 'net' && iTab === 'raster') iTab = 'curr';
+  setSeg($('#iTab'), 't', iTab);
+  hideCard();
+  chainLinks();
+  if (m === 'net' && !netNodes.length) loadPreset('ring'); else resetCells();
+  layoutCell(); renderNetCount();
+  $('#iNote').textContent = 'N1';
+}
+$('#modeSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || b.dataset.m === mode) return;
+  if (activeCase) exitCase();
+  if (activePz) exitPuzzle();
+  setMode(b.dataset.m);
+  log({ single: 'Режим «Нейрон»', syn: 'Режим «Синапс»: три нейрона в цепочке', net: 'Режим «Сеть»: конструктор' }[mode], 'sys');
+});
+$('#focusSeg').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  focus = +b.dataset.f; setSeg($('#focusSeg'), 'f', focus); $('#iNote').textContent = 'N' + (focus + 1);
+});
+$('#iTab').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  iTab = b.dataset.t; setSeg($('#iTab'), 't', iTab);
+});
+document.querySelectorAll('[data-syn]').forEach(sg => {
+  setSeg(sg, 't', synType[+sg.dataset.syn]);
+  sg.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const k = +sg.dataset.syn; synType[k] = b.dataset.t; setSeg(sg, 't', b.dataset.t);
+    chainLinks();
+    log(`Синапс N${k + 1} → N${k + 2}: ${b.dataset.t === 'exc' ? 'возбуждающий' : 'тормозной'}`, 'sys');
+  });
+});
+const DRUG_LOG = {
+  ttx: ['Введён TTX: g Na = 0', 'TTX отмыт'],
+  tea: ['Введён TEA: g K × 0,2', 'TEA отмыт'],
+  lido: ['Введён лидокаин: g Na × 0,35', 'Лидокаин отмыт'],
+  hyperk: ['Гиперкалиемия: E K = −60 мВ', 'Калий в норме: E K = −77 мВ']
+};
+document.querySelectorAll('.cart').forEach(b => b.addEventListener('click', () => {
+  const k = b.dataset.drug; drugs[k] = !drugs[k];
+  b.setAttribute('aria-pressed', String(drugs[k]));
+  updateEnv();
+  $('#ek').textContent = fmt(env.EK, 0);
+  log(DRUG_LOG[k][drugs[k] ? 0 : 1], 'drug');
+  blip(drugs[k] ? 220 : 160, 0, 0.6);
+}));
+function renderSound() {
+  const b = $('#soundBtn');
+  b.textContent = soundOn ? 'Звук: вкл' : 'Звук: выкл';
+  b.setAttribute('aria-pressed', String(soundOn));
+  if (master) master.gain.value = soundOn ? 0.55 : 0;
+}
+$('#soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn; store.set('nc-sound', soundOn);
+  initAudio(); if (actx && actx.state === 'suspended') actx.resume();
+  renderSound();
+});
+
+const ro = {
+  vNum: $('#vNum'), vLabel: $('#vLabel'), gm: $('#gm'), gh: $('#gh'), gn: $('#gn'),
+  spk: $('#spk'), frq: $('#frq'), tChip: $('#tChip')
+};
+function updateReadouts() {
+  ro.tChip.textContent = `t = ${fmt(simT, 1)} мс`;
+  if (!cells.length) return;
+  const i = focusIdx(), c = cells[i];
+  ro.vNum.textContent = fmt(c.V, 1);
+  ro.vNum.classList.toggle('hot', c.V > -20);
+  ro.vLabel.textContent = `V(N${i + 1})`;
+  ro.gm.style.width = (c.m * 100) + '%'; ro.gh.style.width = (c.h * 100) + '%'; ro.gn.style.width = (c.n * 100) + '%';
+  ro.spk.textContent = c.count;
+  const s = c.spikes, n = s.length;
+  ro.frq.textContent = n >= 2 && simT - s[n - 1] < 400 ? Math.round(1000 / (s[n - 1] - s[n - 2])) + ' Гц' : '—';
+  if (cardState) cardL.textContent = cardLive();
+}
+
+/* ================= Клиника ================= */
+const DX = [['ttx', 'Отравление тетродотоксином'], ['hyperk', 'Гиперкалиемия'], ['ms', 'Рассеянный склероз'], ['epi', 'Эпилепсия']];
+const CASES = [
+  {
+    id: 'ttx', title: 'Ужин с рыбой фугу', mode: 'single', stim: 'train', watchIdx: 0,
+    story: 'Мужчина, 41 год. Через полчаса после ужина в ресторане онемели губы и язык, нарастает слабость, трудно дышать. Нерв почти не отвечает на стимуляцию.',
+    look: 'Идёт серия импульсов. Посмотри на ионные токи под осциллографом: какого тока не хватает?',
+    setup() { dz.gNaF = 0; },
+    dx: 'ttx',
+    dxHint: 'Потенциал покоя в норме, а входящего Na⁺-тока нет совсем. Что выключает именно Na⁺-каналы?',
+    dxOk: 'Тетродотоксин из печени и яичников фугу закупоривает пору Na⁺-каналов снаружи, и потенциал действия не может начаться.',
+    tx: [['antidote', 'Антидот к тетродотоксину'], ['vent', 'ИВЛ и ожидание выведения яда'], ['lido', 'Лидокаин']],
+    good: ['vent'],
+    why: { antidote: 'Антидота к тетродотоксину не существует. Врачи поддерживают дыхание, пока почки выводят яд.', lido: 'Лидокаин тоже блокирует Na⁺-каналы и только усилит паралич.' },
+    watch: 'яд выводится, это займёт около 150 мс модельного времени.',
+    treat() { ramp('gNaF', 1, 150); },
+    check: a => cells[0] && cells[0].count >= a.base + 2,
+    done: () => 'Яд вывелся, Na⁺-каналы освободились, и нерв снова проводит импульсы. Пациент выжил благодаря ИВЛ: так и лечат отравление фугу.'
+  },
+  {
+    id: 'hyperk', title: 'Пропущенный диализ', mode: 'single', stim: 'train', watchIdx: 0,
+    story: 'Женщина, 67 лет, с почечной недостаточностью пропустила два сеанса диализа. Мышечная слабость, перебои в работе сердца. Калий в крови 8 ммоль/л при норме 3,5–5.',
+    look: 'Посмотри на потенциал покоя и на воротные переменные: что с h-воротами Na⁺-каналов?',
+    setup() { dz.EK = -52; },
+    dx: 'hyperk',
+    dxHint: 'Мембрана в покое сдвинута вверх, примерно к −55 мВ. Какой ион задаёт потенциал покоя?',
+    dxOk: 'Избыток K⁺ снаружи сдвигает E_K вверх. Мембрана деполяризуется, h-ворота Na⁺-каналов закрываются, и клетка теряет возбудимость. В сердце это грозит остановкой.',
+    tx: [['kcl', 'Хлорид калия внутривенно'], ['insulin', 'Инсулин с глюкозой'], ['ttx', 'Тетродотоксин']],
+    good: ['insulin'],
+    why: { kcl: 'Калия и так слишком много. Ещё одна доза может остановить сердце.', ttx: 'Тетродотоксин просто отключит Na⁺-каналы, и клетка точно не выстрелит.' },
+    watch: 'калий уходит внутрь клеток, E_K возвращается к норме.',
+    treat() { ramp('EK', -77, 80); },
+    check: a => cells[0] && cells[0].count >= a.base + 2,
+    done: () => 'Инсулин запускает Na⁺/K⁺-насос, и калий уходит внутрь клеток. E_K вернулся к −77 мВ, h-ворота открылись, возбудимость восстановлена.'
+  },
+  {
+    id: 'ms', title: 'Двоение в глазах', mode: 'syn', stim: 'train', watchIdx: 2,
+    story: 'Женщина, 29 лет. Эпизоды онемения руки и двоения в глазах то появляются, то проходят. На МРТ бляшки в белом веществе мозга.',
+    look: 'Следи за аксонами: часть импульсов гаснет по пути (красная вспышка), остальные идут втрое медленнее. Посмотри и на оболочку аксонов.',
+    setup() { dz.ms = { block: 0.6, slow: 3 }; },
+    dx: 'ms',
+    dxHint: 'Сами клетки стреляют нормально, а сбой происходит при проведении по аксону. Что изолирует аксон?',
+    dxOk: 'При рассеянном склерозе иммунная система разрушает миелин. Ток утекает через оголённую мембрану, и импульс замедляется или гаснет.',
+    tx: [['fampr', '4-аминопиридин (фампридин)'], ['lido', 'Лидокаин'], ['kcl', 'Хлорид калия']],
+    good: ['fampr'],
+    why: { lido: 'Лидокаин блокирует Na⁺-каналы, и импульсы будут гаснуть ещё чаще.', kcl: 'Лишний калий деполяризует мембрану и ухудшит проведение.' },
+    watch: 'дойдут ли импульсы до N3?',
+    treat() { dz.ms = { block: 0.08, slow: 1.8 }; },
+    check: a => cells[2] && cells[2].count >= a.base + 3,
+    done: () => '4-аминопиридин блокирует K⁺-каналы, которые оголились под разрушенным миелином. Утечка тока падает, и импульсы снова доходят до цели. Это настоящий препарат для людей с РС.'
+  },
+  {
+    id: 'epi', title: 'Приступ у подростка', mode: 'net', stim: 'pulse',
+    story: 'Юноша, 16 лет. Внезапные приступы с потерей сознания и судорогами. На ЭЭГ гиперсинхронные разряды.',
+    look: 'Открыт растр. Сеть разряжается сама, без стимула, синхронно и без остановки. Тормозной нейрон I стреляет, но почти ни на что не влияет.',
+    setup() {
+      loadPreset('seizure');
+      ui.gsyn.value = '0.2'; syncInputs();
+      dz.inhF = 0.1;
+      kicks.push({ cell: 0, t0: simT + 1, t1: simT + 2, amp: 25 });
+      iTab = 'raster'; setSeg($('#iTab'), 't', iTab);
+    },
+    dx: 'epi',
+    dxHint: 'Здесь нет отравления, и все аксоны целы. Посмотри, как ведёт себя вся сеть целиком.',
+    dxOk: 'Эпилептический приступ — это лавина синхронного возбуждения, которую торможение не может погасить. Здесь ГАМК-синапсы работают на 10% силы.',
+    tx: [['benzo', 'Диазепам (усиливает ГАМК-торможение)'], ['carba', 'Карбамазепин (блокирует часть Na⁺-каналов)'], ['kcl', 'Хлорид калия']],
+    good: ['benzo', 'carba'],
+    why: { kcl: 'Калий деполяризует нейроны и сделает приступ сильнее.' },
+    watch: 'приступ должен затихнуть.',
+    treat(v) { if (v === 'benzo') dz.inhF = 6; else dz.gNaF = 0.4; updateEnv(); },
+    check: a => simT - a.t0 >= 100 && cells.every(c => !c.spikes.length || simT - c.spikes[c.spikes.length - 1] >= 100),
+    done: a => a.choice === 'benzo'
+      ? 'Диазепам усиливает действие ГАМК на тормозные синапсы. Торможение снова гасит лавину, и приступ прекратился.'
+      : 'Карбамазепин блокирует часть Na⁺-каналов. Нейроны не могут поддерживать частые разряды, и приступ затух.'
+  }
+];
+const cured = new Set(store.get('nc-clinic', []));
+const dzEl = { list: $('#dzList'), box: $('#dzActive'), step: $('#dzStep'), t: $('#dzT'), story: $('#dzStory'), look: $('#dzLook'), opts: $('#dzOpts'), fb: $('#dzFb') };
+function resetDisease() { dz.gNaF = 1; dz.EK = null; dz.inhF = 1; dz.ms = null; dz.ramps = []; updateEnv(); $('#ek').textContent = fmt(env.EK, 0); }
+function ramp(key, to, T) { dz.ramps.push({ key, from: dz[key], to, t0: simT, T }); }
+function diseaseTick() {
+  if (dz.ramps.length) {
+    for (let k = dz.ramps.length - 1; k >= 0; k--) {
+      const r = dz.ramps[k], f = clamp((simT - r.t0) / r.T, 0, 1);
+      dz[r.key] = lerp(r.from, r.to, f);
+      if (f >= 1) dz.ramps.splice(k, 1);
+    }
+    updateEnv();
+  }
+  if (activeCase && activeCase.state === 'watch' && activeCase.c.check(activeCase)) caseCured();
+}
+function renderClinicList() {
+  dzEl.list.innerHTML = '';
+  for (const c of CASES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'case-item' + (cured.has(c.id) ? ' done' : '');
+    const t = document.createElement('b'); t.style.fontWeight = '500'; t.textContent = c.title;
+    const s = document.createElement('span'); s.textContent = cured.has(c.id) ? 'вылечен' : 'ждёт приёма';
+    b.append(t, s); b.addEventListener('click', () => startCase(c.id));
+    dzEl.list.appendChild(b);
+  }
+  $('#dzProg').textContent = `${cured.size}/${CASES.length}`;
+}
+function renderCase() {
+  const a = activeCase;
+  dzEl.list.hidden = !!a; dzEl.box.hidden = !a;
+  renderClinicList();
+  if (!a) return;
+  const c = a.c;
+  dzEl.t.textContent = c.title; dzEl.story.textContent = c.story; dzEl.look.textContent = c.look;
+  dzEl.step.textContent = { dx: 'Шаг 1 из 2 · диагноз', tx: 'Шаг 2 из 2 · лечение', watch: 'Лечение идёт', done: 'Пациент спасён' }[a.state];
+  dzEl.opts.innerHTML = '';
+  const list = a.state === 'dx' ? DX : a.state === 'tx' ? c.tx : [];
+  for (const [v, label] of list) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn'; b.textContent = label;
+    b.addEventListener('click', () => caseChoose(v));
+    dzEl.opts.appendChild(b);
+  }
+  $('#dzExit').textContent = a.state === 'done' ? 'Следующий пациент' : 'Завершить приём';
+}
+function feedback(text, good) { dzEl.fb.hidden = false; dzEl.fb.textContent = text; dzEl.fb.style.setProperty('--c', good ? 'var(--ok)' : 'var(--bad)'); }
+function startCase(id) {
+  const c = CASES.find(x => x.id === id);
+  if (activePz) exitPuzzle();
+  resetDisease();
+  Object.keys(drugs).forEach(k => { drugs[k] = false; });
+  document.querySelectorAll('.cart').forEach(b => b.setAttribute('aria-pressed', 'false'));
+  synType[0] = synType[1] = 'exc';
+  document.querySelectorAll('[data-syn]').forEach(sg => setSeg(sg, 't', 'exc'));
+  if (mode !== c.mode) setMode(c.mode); else { chainLinks(); if (c.mode !== 'net') resetCells(); }
+  c.setup();
+  updateEnv(); $('#ek').textContent = fmt(env.EK, 0);
+  stim.mode = c.stim; stim.on = stim.mode === 'train'; stim.nextTrain = simT + 2; renderStim();
+  activeCase = { c, state: 'dx', base: 0, t0: 0, choice: null };
+  dzEl.fb.hidden = true;
+  renderCase();
+  log(`Новый пациент: ${c.title}`, 'sys');
+}
+function caseChoose(v) {
+  const a = activeCase; if (!a) return;
+  const c = a.c;
+  if (a.state === 'dx') {
+    if (v !== c.dx) { feedback('Не похоже. ' + c.dxHint, false); blip(110, 0, 0.5); return; }
+    a.state = 'tx'; renderCase();
+    feedback('Диагноз верный. ' + c.dxOk, true);
+    log('Диагноз: ' + DX.find(d => d[0] === v)[1], 'ok');
+  } else if (a.state === 'tx') {
+    if (!c.good.includes(v)) { feedback(c.why[v], false); blip(110, 0, 0.5); return; }
+    a.state = 'watch'; a.t0 = simT; a.choice = v;
+    a.base = c.watchIdx != null && cells[c.watchIdx] ? cells[c.watchIdx].count : 0;
+    c.treat(v); renderCase();
+    feedback('Лечение начато. Наблюдай: ' + c.watch, true);
+    log('Лечение: ' + c.tx.find(x => x[0] === v)[1], 'drug');
+  }
+}
+function caseCured() {
+  const a = activeCase;
+  a.state = 'done';
+  cured.add(a.c.id); store.set('nc-clinic', [...cured]);
+  renderCase();
+  feedback(a.c.done(a), true);
+  toast('Пациент спасён', a.c.title);
+  log(`Пациент спасён: ${a.c.title}`, 'ok');
+  chord();
+}
+function exitCase() {
+  if (!activeCase) return;
+  activeCase = null; resetDisease();
+  dzEl.fb.hidden = true; renderCase();
+  log('Приём окончен, клетки здоровы', 'sys');
+}
+$('#dzExit').addEventListener('click', exitCase);
+
+/* ================= Головоломки ================= */
+const pzNode = (role, x, y) => ({ x, y, input: false, role, fixed: true });
+const ROWS1 = [{ in: [], want: 0 }, { in: ['A'], want: 1 }];
+const PZ = [
+  { id: 'wire', t: 'Провод', h: 'Инструментом «Связь» соедини A и O, чтобы сигнал дошёл до выхода.',
+    nodes: [pzNode('A', 0.08, 0.5), pzNode('O', 0.92, 0.5)], rows: ROWS1 },
+  { id: 'relay', t: 'Ретранслятор', h: 'Связь не может быть длиннее жёлтого овала вокруг нейрона. Поставь промежуточные нейроны и проведи сигнал от A до O.',
+    maxLen: 0.35, nodes: [pzNode('A', 0.04, 0.5), pzNode('O', 0.96, 0.5)], rows: ROWS1 },
+  { id: 'or', t: 'Логическое ИЛИ', h: 'O должен выстрелить, если пришёл сигнал от A, от B или от обоих сразу.',
+    nodes: [pzNode('A', 0.08, 0.15), pzNode('B', 0.08, 0.85), pzNode('O', 0.9, 0.5)],
+    rows: [{ in: [], want: 0 }, { in: ['A'], want: 1 }, { in: ['B'], want: 1 }, { in: ['A', 'B'], want: 1 }] },
+  { id: 'and', t: 'Детектор совпадений (И)', h: 'O стреляет, только когда A и B приходят вместе. Один синапс должен быть слишком слабым, а два вместе — достаточными. Подбери силу синапса g_syn ниже, подсказка: около 0,07.',
+    nodes: [pzNode('A', 0.08, 0.15), pzNode('B', 0.08, 0.85), pzNode('O', 0.9, 0.5)],
+    rows: [{ in: [], want: 0 }, { in: ['A'], want: 0 }, { in: ['B'], want: 0 }, { in: ['A', 'B'], want: 1 }] },
+  { id: 'echo', t: 'Эхо-память', h: 'Один импульс в A, а O должен стрелять и дальше: минимум 3 спайка между 60 и 150 мс. Без петли из нейронов не обойтись.',
+    T: 150, nodes: [pzNode('A', 0.08, 0.5), pzNode('O', 0.62, 0.5)], rows: [{ in: [], want: 0 }, { in: ['A'], want: 'echo' }] }
+];
+const solved = new Set(store.get('nc-puzzles', []));
+const pzEl = { list: $('#pzList'), box: $('#pzActive'), t: $('#pzT'), h: $('#pzH'), fire: $('#pzFire'), rows: $('#pzRows') };
+function renderPuzzleList() {
+  pzEl.list.innerHTML = '';
+  for (const p of PZ) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'case-item' + (solved.has(p.id) ? ' done' : '');
+    const t = document.createElement('b'); t.style.fontWeight = '500'; t.textContent = p.t;
+    const s = document.createElement('span'); s.textContent = solved.has(p.id) ? 'решена' : 'не решена';
+    b.append(t, s); b.addEventListener('click', () => startPuzzle(p.id));
+    pzEl.list.appendChild(b);
+  }
+  $('#pzProg').textContent = `${solved.size}/${PZ.length}`;
+}
+function renderPuzzle() {
+  pzEl.list.hidden = !!activePz; pzEl.box.hidden = !activePz;
+  renderPuzzleList();
+  if (!activePz) return;
+  pzEl.t.textContent = activePz.t; pzEl.h.textContent = activePz.h;
+  pzEl.fire.innerHTML = ''; pzEl.rows.innerHTML = '';
+  const ins = [...new Set(activePz.nodes.map(n => n.role).filter(r => r !== 'O'))];
+  const combos = ins.length > 1 ? [...ins.map(r => [r]), ins] : [ins];
+  for (const set of combos) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
+    b.textContent = 'Подать ' + set.join(' + ');
+    b.addEventListener('click', () => {
+      netNodes.forEach((n, i) => { if (set.includes(n.role)) kicks.push({ cell: i, t0: simT, t1: simT + 1, amp: 20 }); });
+      blip(140, 0, 0.5);
+    });
+    pzEl.fire.appendChild(b);
+  }
+}
+function startPuzzle(id) {
+  const pz = PZ.find(p => p.id === id);
+  if (activeCase) exitCase();
+  if (mode !== 'net') setMode('net');
+  netNodes = pz.nodes.map(n => ({ ...n })); links = [];
+  cells = netNodes.map(makeCell); releases = []; kicks = []; axPulses = []; parts.length = 0;
+  hideCard(); linkFrom = -1; renderNetCount();
+  focus = netNodes.findIndex(n => n.role === 'O'); $('#iNote').textContent = 'N' + (focus + 1);
+  activePz = pz; renderPuzzle(); setTool('link');
+  log(`Головоломка: ${pz.t}`, 'sys');
+}
+function exitPuzzle() {
+  if (!activePz) return;
+  activePz = null;
+  netNodes.forEach(n => { delete n.fixed; });
+  renderPuzzle();
+}
+// прогон сети «в пробирке»: свежие клетки, вход — один импульс 20 мкА/см² на 5-й мс
+function runRow(active, T) {
+  const cs = netNodes.map(makeCell), rel = [], out = netNodes.findIndex(n => n.role === 'O'), sp = [];
+  for (let t = 0; t < T; t += DT) {
+    for (let r = rel.length - 1; r >= 0; r--) if (rel[r].t <= t) { deliver(cs[rel[r].to], rel[r].inh); rel.splice(r, 1); }
+    for (let i = 0; i < cs.length; i++) {
+      const c = cs[i], I = active.includes(netNodes[i].role) && t >= 5 && t < 6 ? 20 : 0;
+      step(c, DT, I, gsyn * c.sE, gsyn * env.inhF * c.sI);
+      c.sE *= SYN_DECAY; c.sI *= SYN_DECAY;
+      if (c.lastV < 0 && c.V >= 0) {
+        if (i === out) sp.push(t);
+        for (const l of links) if (l.from === i) rel.push({ to: l.to, t: t + linkDelay(l), inh: l.inh });
+      }
+      c.lastV = c.V;
+    }
+  }
+  return sp;
+}
+const spikeWord = n => n % 10 === 1 && n % 100 !== 11 ? 'спайк' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'спайка' : 'спайков');
+function checkPuzzle() {
+  const pz = activePz; if (!pz) return;
+  pzEl.rows.innerHTML = '<li>Прогоняю сеть…</li>';
+  setTimeout(() => {
+    pzEl.rows.innerHTML = '';
+    let all = true;
+    for (const row of pz.rows) {
+      const sp = runRow(row.in, pz.T || 60);
+      let ok, want;
+      if (row.want === 'echo') { const n = sp.filter(t => t >= 60).length; ok = n >= 3; want = '≥ 3 спайка после 60 мс'; }
+      else if (row.want) { ok = sp.some(t => t >= 5 && t <= 50); want = 'O стреляет'; }
+      else { ok = sp.length === 0; want = 'O молчит'; }
+      all = all && ok;
+      const li = document.createElement('li'); li.className = ok ? 'ok' : 'bad';
+      const a = document.createElement('span'); a.textContent = `${row.in.length ? row.in.join(' + ') : 'без входа'} → ${want}`;
+      const b = document.createElement('span'); b.textContent = `${ok ? '✓' : '✗'} ${sp.length} ${spikeWord(sp.length)}`;
+      li.append(a, b); pzEl.rows.appendChild(li);
+    }
+    if (all) {
+      const first = !solved.has(pz.id);
+      solved.add(pz.id); store.set('nc-puzzles', [...solved]); renderPuzzleList();
+      toast('Головоломка решена', pz.t); log(`Головоломка решена: ${pz.t}`, 'ok');
+      if (first) chord(); else blip(660, 0, 0.6);
+    } else {
+      log(`Проверка «${pz.t}» не пройдена`, 'sys'); blip(110, 0, 0.5);
+    }
+  }, 30);
+}
+$('#pzCheck').addEventListener('click', checkPuzzle);
+$('#pzExit').addEventListener('click', exitPuzzle);
+
+/* ================= Обучение ================= */
+const TOUR = [
+  { sel: '#cellWrap', t: 'Живая клетка', p: 'Нейрон считается по уравнениям Ходжкина–Хаксли в реальном времени. Нажми на сому, дендрит или аксон, чтобы узнать, как работает эта часть.' },
+  { sel: '.p-ctrl', t: 'Стимулятор', p: 'Подаёт ток во входной нейрон. «Импульс» даёт один толчок, «Серия» стреляет ритмично, «Постоянный» держит ток. Пробел нажимает большую кнопку.' },
+  { sel: '.p-scope', t: 'Осциллограф', p: 'Сверху мембранный потенциал: пик выше 0 мВ означает спайк. Снизу ионные токи и воротные переменные m, h, n.' },
+  { sel: '.carts', t: 'Фармакология', p: 'Картриджи блокируют каналы или меняют ионный состав. Введи TTX и попробуй вызвать спайк.' },
+  { sel: '#clinic', t: 'Клиника', p: 'Четыре настоящих пациента. Поставь диагноз по тому, как ведут себя клетки, и подбери лечение.' },
+  { sel: '#missions', t: 'Миссии и звания', p: 'Задания разбиты на три уровня. Закрой все миссии уровня, чтобы открыть следующий и получить новое звание.' },
+  { sel: '#modeSeg', t: 'Режимы', p: '«Синапс» соединяет три нейрона в цепочку. «Сеть» открывает конструктор и головоломки: собери из нейронов провод, логические «И» и «ИЛИ» и память.' }
+];
+const tourEl = $('#tour'), tourSpot = $('#tourSpot'), tourCard = $('#tourCard');
+let tourStep = -1;
+function tourGo(k) {
+  tourStep = k;
+  const s = TOUR[k];
+  $('#tourN').textContent = `Обучение · шаг ${k + 1} из ${TOUR.length}`;
+  $('#tourT').textContent = s.t; $('#tourP').textContent = s.p;
+  $('#tourPrev').disabled = k === 0;
+  $('#tourNext').textContent = k === TOUR.length - 1 ? 'Готово' : 'Далее';
+  const el = $(s.sel);
+  if (el) el.scrollIntoView({ block: 'center', behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+function startTour() { tourEl.hidden = false; tourGo(0); $('#tourNext').focus({ preventScroll: true }); }
+function endTour() { tourEl.hidden = true; tourStep = -1; store.set('nc-tour', true); }
+function positionTour() {
+  const el = $(TOUR[tourStep].sel); if (!el) return;
+  const r = el.getBoundingClientRect(), pad = 6, vw = innerWidth, vh = innerHeight;
+  const top = Math.max(4, r.top - pad), bottom = Math.min(vh - 4, r.bottom + pad);
+  tourSpot.style.left = (r.left - pad) + 'px'; tourSpot.style.top = top + 'px';
+  tourSpot.style.width = (r.width + pad * 2) + 'px'; tourSpot.style.height = Math.max(0, bottom - top) + 'px';
+  const cw = tourCard.offsetWidth, ch = tourCard.offsetHeight;
+  let y = bottom + 12;
+  if (y + ch > vh - 12) y = top - ch - 12;
+  if (y < 12) y = vh - ch - 16;
+  tourCard.style.left = clamp(r.left, 16, vw - cw - 16) + 'px';
+  tourCard.style.top = y + 'px';
+}
+$('#tourNext').addEventListener('click', () => tourStep < TOUR.length - 1 ? tourGo(tourStep + 1) : endTour());
+$('#tourPrev').addEventListener('click', () => tourStep > 0 && tourGo(tourStep - 1));
+$('#tourSkip').addEventListener('click', endTour);
+$('#tourBtn').addEventListener('click', startTour);
+
+document.addEventListener('keydown', e => {
+  if (!entered) { if (e.key === 'Enter' || e.code === 'Space') { e.preventDefault(); enter(); } return; }
+  if (e.key === 'Escape') { if (tourStep >= 0) endTour(); else hideCard(); linkFrom = -1; return; }
+  if (e.code === 'Space' && !e.target.closest('button,a,textarea,select,[contenteditable]')) { e.preventDefault(); ui.fire.click(); }
+});
+
+/* ================= Главный цикл ================= */
+let lastNow = performance.now(), uiAcc = 0;
+function frame(now) {
+  const dt = Math.min(0.05, (now - lastNow) / 1000); lastNow = now;
+  if (running && entered) simulate(stim.speed * dt);
+  pulses = pulses.filter(p => p.t1 > simT - 40 || (p.manual && !p.checked));
+  axPulses = axPulses.filter(p => simT - p.t0 < (p.dl || (p.T || AXON_T) * 2.2) + 0.5);
+  kicks = kicks.filter(q => q.t1 > simT);
+  drawCell(dt); drawScopeV(); drawScopeI();
+  uiAcc += dt; if (uiAcc > 0.08) { uiAcc = 0; updateReadouts(); }
+  if (tourStep >= 0) positionTour();
+  requestAnimationFrame(frame);
+}
+
+/* ================= Заставка ================= */
+const introEl = $('#intro'), ic = $('#introCanvas'), ictx = ic.getContext('2d'), app = $('#app');
+const titleEl = $('#introTitle'), TITLE = 'NEURO//CORE', GLYPHS = 'ΔΣΨΩλ01<>/\\#*+~≈';
+titleEl.textContent = '';
+const tSpans = [...TITLE].map(ch => {
+  const s = document.createElement('span'); s.textContent = ch; s.setAttribute('aria-hidden', 'true');
+  if (ch === '/') s.className = 'sl';
+  titleEl.appendChild(s); return s;
+});
+const BOOT = [
+  ['мембрана: C = 1 мкФ/см²', 'OK'],
+  ['Na⁺-каналы: g = 120 мС/см², E = +50 мВ', 'OK'],
+  ['K⁺-каналы: g = 36 мС/см², E = −77 мВ', 'OK'],
+  ['утечка: g = 0,3 мС/см², E = −54,4 мВ', 'OK'],
+  ['интегратор Рунге–Кутты 4, Δt = 0,01 мс', 'OK'],
+  ['потенциал покоя −65 мВ · нейрон жив', 'ГОТОВ']
+];
+const bootEl = $('#bootLog'), bootBar = $('#bootBar'), enterBtn = $('#enterBtn');
+let iW = 1, iH = 1, iPts = [], iGeo = null, iStart = performance.now(), introAlive = true, bootShown = 0, lastScr = 0;
+function addBoot(i) {
+  const li = document.createElement('li');
+  const a = document.createElement('span'); a.textContent = '› ' + BOOT[i][0];
+  const b = document.createElement('b'); b.textContent = BOOT[i][1];
+  li.append(a, b); bootEl.appendChild(li);
+  bootBar.style.width = ((i + 1) / BOOT.length * 100) + '%';
+}
+function introLayout() {
+  const d = DPR(); iW = innerWidth; iH = innerHeight;
+  ic.width = Math.round(iW * d); ic.height = Math.round(iH * d);
+  const R = clamp(Math.min(iW, iH) * 0.05, 14, 36);
+  const cy = iH * (iW < 700 ? 0.27 : 0.3), cx = clamp(iW * 0.32, R * 6, iW * 0.5);
+  iGeo = buildNeuron(3, cx, cy, R, Math.min(iW - R * 2.4, cx + iW * 0.6), { myelin: 5, nD: 7, depth: 3, terminals: 4 });
+  const settled = (performance.now() - iStart) / 1000 > 2;
+  iPts = [];
+  const add = (x, y, grp, t) => iPts.push({ tx: x, ty: y, grp, t, sx: settled ? x : Math.random() * iW, sy: settled ? y : Math.random() * iH, delay: Math.random() * 0.7, seed: Math.random() * 6.28 });
+  for (let k = 0; k < 90; k++) { const a = k / 90 * 6.283; add(cx + Math.cos(a) * R, cy + Math.sin(a) * R, 'soma', 0); }
+  for (let k = 0; k < 60; k++) { const a = Math.random() * 6.283, r = Math.sqrt(Math.random()) * R * 0.85; add(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 'soma', 0); }
+  for (const s of iGeo.segs) {
+    const L = Math.hypot(s.x2 - s.x1, s.y2 - s.y1), n = Math.max(3, Math.round(L / 3.2));
+    for (let j = 0; j < n; j++) { const p = bez(s, j / n); add(p.x + (Math.random() - 0.5) * s.w * 0.8, p.y + (Math.random() - 0.5) * s.w * 0.8, 'dend', s.d); }
+  }
+  const axL = iGeo.ax[iGeo.ax.length - 1].x - iGeo.ax[0].x, na = Math.round(axL / 2.6);
+  for (let j = 0; j <= na; j++) { const t = j / na, p = axonPoint(iGeo, t); add(p.x, p.y + (Math.random() - 0.5) * 2, 'axon', t); }
+  for (const t of iGeo.term) for (let j = 0; j < 9; j++) { const q = j / 8; add(lerp(t.x1, t.x2, q), lerp(t.y1, t.y2, q), 'term', 0); }
+}
+function introUI(t) {
+  if (t - lastScr > 0.05) {
+    lastScr = t;
+    tSpans.forEach((s, i) => {
+      const at = 1.3 + i * 0.075;
+      if (t < at) { s.textContent = GLYPHS[(Math.random() * GLYPHS.length) | 0]; s.style.opacity = t < 0.35 ? '0' : '0.5'; }
+      else if (s.dataset.ok !== '1') { s.textContent = TITLE[i]; s.style.opacity = ''; s.dataset.ok = '1'; }
+    });
+  }
+  while (bootShown < BOOT.length && t >= 2.2 + bootShown * 0.36) addBoot(bootShown++);
+  if (bootShown === BOOT.length && enterBtn.hidden && t >= 2.2 + BOOT.length * 0.36 + 0.1) {
+    enterBtn.hidden = false; enterBtn.focus({ preventScroll: true });
+  }
+}
+function drawIntro(t, still) {
+  const d = DPR();
+  ictx.setTransform(d, 0, 0, d, 0, 0);
+  ictx.globalCompositeOperation = 'source-over';
+  ictx.fillStyle = still ? '#03080f' : 'rgba(3,8,15,0.3)';
+  ictx.fillRect(0, 0, iW, iH);
+  ictx.globalCompositeOperation = 'lighter';
+  const active = t >= 1.9, pT = active ? (t - 1.9) % 1.7 : -1;
+  if (active && iGeo) {
+    const sg = Math.max(0, 1 - Math.abs(pT - 0.2) / 0.25), rr = iGeo.R * (3 + sg * 3);
+    const gr = ictx.createRadialGradient(iGeo.cx, iGeo.cy, 0, iGeo.cx, iGeo.cy, rr);
+    gr.addColorStop(0, `rgba(255,90,209,${0.35 * sg})`); gr.addColorStop(1, 'rgba(255,90,209,0)');
+    ictx.fillStyle = gr; ictx.beginPath(); ictx.arc(iGeo.cx, iGeo.cy, rr, 0, 6.283); ictx.fill();
+  }
+  const glowing = [];
+  ictx.fillStyle = 'rgba(63,200,255,0.55)';
+  for (const p of iPts) {
+    const k = still ? 1 : clamp((t - p.delay) / 1.3, 0, 1), e = 1 - Math.pow(1 - k, 3);
+    let x = lerp(p.sx, p.tx, e), y = lerp(p.sy, p.ty, e);
+    if (k >= 1 && !still) { x += Math.sin(t * 1.3 + p.seed) * 0.6; y += Math.cos(t * 1.1 + p.seed) * 0.6; }
+    let gl = 0;
+    if (active) {
+      if (p.grp === 'soma') gl = Math.max(0, 1 - Math.abs(pT - 0.2) / 0.2);
+      else if (p.grp === 'axon') { const q = salt((pT - 0.25) / 0.75, 5); gl = Math.max(0, 1 - Math.abs(q - p.t) / 0.05); }
+      else if (p.grp === 'term') gl = Math.max(0, 1 - Math.abs(pT - 1.08) / 0.2);
+      else gl = Math.max(0, 1 - Math.abs(pT - (0.16 - p.t * 0.05)) / 0.1) * 0.7;
+    }
+    if (gl > 0.05) glowing.push(x, y, gl);
+    const s = p.grp === 'soma' ? 1.8 : 1.4;
+    ictx.fillRect(x - s / 2, y - s / 2, s, s);
+  }
+  for (let j = 0; j < glowing.length; j += 3) {
+    const x = glowing[j], y = glowing[j + 1], g = glowing[j + 2];
+    ictx.fillStyle = `rgba(255,${(110 + 120 * g) | 0},${(215 + 30 * g) | 0},${0.35 + 0.6 * g})`;
+    const s = 1.6 + g * 2.6; ictx.fillRect(x - s / 2, y - s / 2, s, s);
+  }
+}
+function introFrame(now) {
+  if (!introAlive) return;
+  const t = (now - iStart) / 1000;
+  drawIntro(t, false); introUI(t);
+  requestAnimationFrame(introFrame);
+}
+function enter() {
+  if (entered) return;
+  entered = true;
+  initAudio(); if (actx && actx.state === 'suspended') actx.resume();
+  bootSound();
+  introEl.classList.add('leaving');
+  document.body.classList.remove('locked');
+  app.classList.add('live');
+  setTimeout(() => { introAlive = false; introEl.hidden = true; }, reduceMotion ? 0 : 950);
+  resizeAll();
+  log('Оператор в лаборатории. Идёт серия импульсов 25 Гц.', 'ok');
+  if (!store.get('nc-tour', false)) setTimeout(startTour, reduceMotion ? 100 : 1500);
+}
+enterBtn.addEventListener('click', enter);
+$('#skipIntro').addEventListener('click', enter);
+addEventListener('resize', () => { if (introAlive) { introLayout(); if (reduceMotion) drawIntro(5, true); } });
+
+/* ================= Старт ================= */
+setSeg($('#iTab'), 't', 'curr');
+setSeg($('#linkType'), 't', 'exc');
+setTool('select');
+syncInputs(); renderStim(); renderSound(); renderMissions(); renderClinicList(); renderPuzzleList();
+resizeAll();
+setMode('single');
+new ResizeObserver(() => resizeAll()).observe(cellWrap);
+const scopeRO = new ResizeObserver(() => { sizeCanvas(sv); sizeCanvas(si); });
+scopeRO.observe($('#svWrap')); scopeRO.observe($('#siWrap'));
+introLayout();
+if (reduceMotion) {
+  tSpans.forEach((s, i) => { s.textContent = TITLE[i]; });
+  BOOT.forEach((_, i) => addBoot(i)); bootShown = BOOT.length;
+  enterBtn.hidden = false;
+  drawIntro(5, true);
+} else {
+  requestAnimationFrame(introFrame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
